@@ -77,7 +77,7 @@ def parse_wkt_polygon_or_multipolygon(wkt: str) -> List[List[Tuple[float, float]
                 rings.append(_parse_ring_text(rt))
         return rings
 
-    # If the data ever contains other types, skip safely (this is after a brief survey of data, will be finalized after statistical analysis)
+    # if the data ever contains other types, skip safely (this is after a brief survey of data, will be finalized after statistical analysis)
     return []
 
 
@@ -85,10 +85,10 @@ def draw_polygons_on_image(image_path: str, json_path: str, out_path: str, line_
     with open(json_path, "r", encoding="utf-8") as f:
         data: Dict[str, Any] = json.load(f)
 
-    # Open image
+    # open image
     base = Image.open(image_path).convert("RGBA")
 
-    # Transparent overlay so fill alpha works
+    # transparent overlay so fill alpha works
     overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
@@ -107,10 +107,10 @@ def draw_polygons_on_image(image_path: str, json_path: str, out_path: str, line_
             if len(ring) < 3:
                 continue
 
-            # Fill + outline
+            # fill + outline
             draw.polygon(ring, fill=fill, outline=outline)
 
-            # Thicker outline
+            # thicker outline
             if line_width > 1:
                 draw.line(ring + [ring[0]], fill=outline, width=line_width)
 
@@ -159,19 +159,19 @@ def main():
 
         sampled_pair_indices = rng.sample(range(num_pairs), k=k)
 
-        # Expand pair indices into file indices: pi -> (2*pi, 2*pi+1)
+        # consider pairs of pre & post disaster files
         file_indices = []
         for pi in sampled_pair_indices:
             i = 2 * pi
             file_indices.extend([i, i + 1])
 
-        # Keep processing order stable (optional but nice)
+        # keep processing order stable
         file_indices.sort()
 
         label_files = [label_files[i] for i in file_indices]
 
     else:
-        # Original behavior: take first N JSON files (0 = all)
+        # take first N JSON files (0 = all)
         if args.limit and args.limit > 0:
             label_files = label_files[:args.limit]
 
