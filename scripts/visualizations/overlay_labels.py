@@ -14,6 +14,7 @@ Purpose: This script was written for the purpose of visualizing the xView2 datas
 import os
 import json
 import argparse
+import random
 from typing import List, Tuple, Dict, Any
 
 from PIL import Image, ImageDraw
@@ -124,12 +125,17 @@ def main():
     ap.add_argument("--root", required=True, help="Path to split folder containing images/ and labels/ (e.g. ~/Downloads/xview2_test/test)") # folder containing both labels and images
     ap.add_argument("--out", default="vis_labels", help="Output folder name (created inside root unless absolute path)") # specified output folder
     ap.add_argument("--line_width", type=int, default=2, help="Polygon outline thickness") # aesthetics
-    ap.add_argument("--limit", type=int, default=0, help="Process only first N files (0 = all)") # debugging purposes
+    ap.add_argument("--limit", type=int, default=0, help="If --sample is OFF: process first N label files (0 = all). ""If --sample is ON: sample N PAIRS (2N files).")
+    ap.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
+    ap.add_argument("--sample", action="store_true", help="Randomly sample N contiguous PAIRS (uses --limit) instead of taking first N files.")
+
     args = ap.parse_args()
 
     root = os.path.expanduser(args.root)
     images_dir = os.path.join(root, "images")
     labels_dir = os.path.join(root, "labels")
+
+    label_files = sorted([f for f in os.listdir(labels_dir) if f.endswith(".json")])
 
     out_dir = args.out
     if not os.path.isabs(out_dir):
@@ -140,9 +146,34 @@ def main():
     if not os.path.isdir(labels_dir):
         raise FileNotFoundError(f"Missing labels dir: {labels_dir}")
 
-    label_files = sorted([f for f in os.listdir(labels_dir) if f.endswith(".json")])
-    if args.limit and args.limit > 0:
-        label_files = label_files[:args.limit]
+    num_pairs = len(label_files) // 2
+    if num_pairs == 0:
+        raise FileNotFoundError(f"No label pairs found in {labels_dir} (need at least 2 .json files).")
+
+    if args.sample:
+        if args.limit <= 0:
+            raise ValueError("--sample requires --limit > 0 (number of pairs to sample).")
+
+        rng = random.Random(args.seed)
+        k = min(args.limit, num_pairs)
+
+        sampled_pair_indices = rng.sample(range(num_pairs), k=k)
+
+        # Expand pair indices into file indices: pi -> (2*pi, 2*pi+1)
+        file_indices = []
+        for pi in sampled_pair_indices:
+            i = 2 * pi
+            file_indices.extend([i, i + 1])
+
+        # Keep processing order stable (optional but nice)
+        file_indices.sort()
+
+        label_files = [label_files[i] for i in file_indices]
+
+    else:
+        # Original behavior: take first N JSON files (0 = all)
+        if args.limit and args.limit > 0:
+            label_files = label_files[:args.limit]
 
     missing = 0
     for lf in label_files:
