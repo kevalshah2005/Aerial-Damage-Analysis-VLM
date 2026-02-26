@@ -1,7 +1,8 @@
 "use client"
 
-import { Globe, MessageSquare, PanelRightClose, PanelRightOpen } from "lucide-react"
+import { Globe, MessageSquare, PanelRightClose, PanelRightOpen, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuthenticator } from "@aws-amplify/ui-react"
 
 interface DashboardHeaderProps {
   chatOpen: boolean
@@ -12,6 +13,8 @@ export default function DashboardHeader({
   chatOpen,
   onToggleChat,
 }: DashboardHeaderProps) {
+  const { signOut, user } = useAuthenticator()
+
   return (
     <header className="flex items-center justify-between h-12 px-4 bg-card border-b border-border shrink-0">
       <div className="flex items-center gap-2.5">
@@ -29,9 +32,19 @@ export default function DashboardHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground hidden sm:inline">
-          Aerial Imagery Dashboard
+        <span className="text-xs text-muted-foreground hidden lg:inline mr-2">
+          {user?.signInDetails?.loginId || user?.username}
         </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => signOut()}
+          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          <span>Logout</span>
+        </Button>
+        <div className="w-px h-4 bg-border mx-1" />
         <Button
           variant="ghost"
           size="icon"

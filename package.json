@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.27",
     "@ai-sdk/react": "^3.0.0",
+    "@aws-amplify/ui-react": "^6.15.1",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
@@ -41,6 +42,7 @@
     "@radix-ui/react-tooltip": "1.1.6",
     "ai": "^6.0.0",
     "autoprefixer": "^10.4.20",
+    "aws-amplify": "^6.16.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",

@@ -22,10 +22,15 @@ npm install --legacy-peer-deps
 ```
 
 ### Environment Setup
-Create a `.env.local` file in the root directory and add your OpenAI API key:
+Create a `.env.local` file in the root directory and add your OpenAI and AWS Cognito keys:
 
 ```env
 OPENAI_API_KEY=your_api_key_here
+
+# AWS Cognito Configuration
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=your_user_pool_id
+NEXT_PUBLIC_COGNITO_CLIENT_ID=your_client_id
+NEXT_PUBLIC_COGNITO_REGION=your_aws_region
 ```
 
 ### Running the Project

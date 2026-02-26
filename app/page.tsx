@@ -1,13 +1,17 @@
 "use client"
 
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
+import { useAuthenticator } from "@aws-amplify/ui-react"
 import DashboardHeader from "@/components/dashboard-header"
 import ChatPanel from "@/components/chat-panel"
 import UploadCard from "@/components/upload-card"
 
 export default function Page() {
+  const { authStatus } = useAuthenticator(context => [context.authStatus])
+  const router = useRouter()
   const [chatOpen, setChatOpen] = useState(true)
 
   // Track uploads for each column (0, 1, 2)
@@ -15,6 +19,25 @@ export default function Page() {
 
   // Signal to tell UploadCards to clear themselves
   const [resetSignal, setResetSignal] = useState(0)
+
+  useEffect(() => {
+    if (authStatus === 'unauthenticated') {
+      router.push('/auth')
+    }
+  }, [authStatus, router])
+
+  if (authStatus === 'configuring' || authStatus === 'unauthenticated') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground animate-pulse">
+            Authenticating...
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const handleUpload = (col: number) => {
     setUploads(prev => {
