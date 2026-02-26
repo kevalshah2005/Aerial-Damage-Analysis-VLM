@@ -224,18 +224,21 @@ export default function Page() {
           </div>
 
           {/* Carousel Section */}
-          <div className="flex-1 flex items-center justify-center px-12">
+          <div className="flex-1 flex items-center justify-center px-4 sm:px-12">
             {pairs.length > 0 ? (
               <Carousel
                 opts={{
                   align: "start",
                   loop: true,
                 }}
-                className="w-full max-w-5xl"
+                className="w-full max-w-[1600px]"
               >
-                <CarouselContent className="-ml-4">
+                <CarouselContent className="-ml-2 md:-ml-4">
                   {pairs.map((pair) => (
-                    <CarouselItem key={pair.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                    <CarouselItem 
+                      key={pair.id} 
+                      className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                    >
                       <div className="p-1">
                         <ImageryPairCard
                           preImage={pair.preImage}
@@ -249,9 +252,14 @@ export default function Page() {
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <div className="hidden sm:block">
-                  <CarouselPrevious className="h-10 w-10 -left-14 border-border bg-card hover:bg-accent" />
-                  <CarouselNext className="h-10 w-10 -right-14 border-border bg-card hover:bg-accent" />
+                <div className="hidden xl:block">
+                  <CarouselPrevious className="h-12 w-12 -left-16 border-border bg-card hover:bg-accent" />
+                  <CarouselNext className="h-12 w-12 -right-16 border-border bg-card hover:bg-accent" />
+                </div>
+                {/* Mobile/Tablet Controls - simpler placement */}
+                <div className="xl:hidden flex justify-center gap-4 mt-8">
+                  <CarouselPrevious className="static translate-y-0 h-10 w-10 border-border bg-card" />
+                  <CarouselNext className="static translate-y-0 h-10 w-10 border-border bg-card" />
                 </div>
               </Carousel>
             ) : (
