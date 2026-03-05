@@ -46,6 +46,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Project Structure
 - `/app`: Next.js App Router (pages and API routes).
 - `/components`: React components (UI and Map logic).
-- `/lib`: Utility functions.
+- `/content`: Local dataset storage (Hurricane Harvey xBD patches).
+- `/lib`: Utility functions and shared types.
 - `/hooks`: Custom React hooks.
 - `/public`: Static assets.
+
+## Dataset & Content
+
+The application is designed to process and visualize the **xBD Dataset** (specifically Hurricane Harvey patches). The `content/` folder is used as a local repository for these files.
+
+### Required File Pairs
+For the dashboard to correctly align imagery on the map, you should upload/include pairs of files:
+1.  **Imagery (.png)**: 1024x1024 orthorectified image patches (e.g., `hurricane-harvey_00000037_post_disaster.png`).
+2.  **Metadata/Labels (.json)**: Contains building polygons in both pixel (`xy`) and geographic (`lng_lat`) coordinates.
+
+### How it works
+The system automatically pairs `.png` and `.json` files by their filename. It parses the **WKT (Well-Known Text)** building polygons from the JSON to calculate a precise geographic scale and offset, allowing the images to be "draped" accurately over the Leaflet map as `ImageOverlays`.
