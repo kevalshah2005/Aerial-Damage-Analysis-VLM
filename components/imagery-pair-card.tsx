@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 interface ImageryPairCardProps {
   preImage: string | null
   postImage: string | null
-  damageLevel: string
   label?: string
   onDelete?: () => void
   onView?: () => void
@@ -19,7 +18,6 @@ interface ImageryPairCardProps {
 export default function ImageryPairCard({
   preImage,
   postImage,
-  damageLevel,
   label,
   onDelete,
   onView,
@@ -94,23 +92,6 @@ export default function ImageryPairCard({
               <span className="text-xs">No Post Image</span>
             </div>
           )}
-        </div>
-
-        {/* DAMAGE EVALUATION */}
-        <div className="mt-2 pt-3 border-t border-border flex flex-col items-center gap-1">
-          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
-            Damage Evaluation
-          </span>
-          <div className={cn(
-            "text-sm font-bold uppercase tracking-wide px-3 py-1 rounded-full",
-            damageLevel === "no-damage" ? "bg-emerald-500/20 text-emerald-500" :
-            damageLevel === "minor-damage" ? "bg-amber-500/20 text-amber-500" :
-            damageLevel === "major-damage" ? "bg-orange-500/20 text-orange-500" :
-            damageLevel === "destroyed" ? "bg-destructive/20 text-destructive" :
-            "bg-secondary text-secondary-foreground"
-          )}>
-            {damageLevel.replace(/-/g, ' ')}
-          </div>
         </div>
       </CardContent>
     </Card>
