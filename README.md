@@ -62,3 +62,9 @@ For the dashboard to correctly align imagery on the map, you should upload/inclu
 
 ### How it works
 The system automatically pairs `.png` and `.json` files by their filename. It parses the **WKT (Well-Known Text)** building polygons from the JSON to calculate a precise geographic scale and offset, allowing the images to be "draped" accurately over the Leaflet map as `ImageOverlays`.
+
+## Scripts In Content Directory
+
+There are two scripts in `content/`, `make-symlinks.sh` and `overlay-labels.py`
+
+`overlay-labels.py` works by taking a required flag called `--root` which takes a directory. From that directory, it will attempt to find two directories `images` and `labels`. In order to maintain the functionality of the script, `make-symlinks.sh` creates the two directories in `images-and-labels/` and makes symlinks of the png files in `images` and json files in `labels` in this way, when you execute the script with `--root images-and-labels`, it can work as intended.
