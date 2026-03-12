@@ -60,14 +60,15 @@ export default function Page() {
     if (authStatus === 'unauthenticated') router.push('/auth')
   }, [authStatus, router])
 
-  const parseBoundsFromJson = async (file: File): Promise<[[number, number], [number, number]] | null> => {
+  const parseJsonData = async (file: File): Promise<{ bounds: [[number, number], [number, number]] | null, geometries: any[] }> => {
     try {
       const text = await file.text()
       const data = JSON.parse(text)
       const lngLats = data?.features?.lng_lat
       const xys = data?.features?.xy
+      const geometries: any[] = []
       
-      if (!lngLats || !xys || lngLats.length === 0 || xys.length === 0) return null
+      if (!lngLats || !xys || lngLats.length === 0 || xys.length === 0) return { bounds: null, geometries: [] }
 
       const getPoints = (wkt: string) => {
         const match = wkt.match(/\(\((.*?)\)\)/)
@@ -83,10 +84,19 @@ export default function Page() {
         if (gps.length === pxs.length) {
           allGeo.push(...gps as [number, number][])
           allPixel.push(...pxs as [number, number][])
+          
+          // Store geometry for map visualization
+          // Leaflet expects [lat, lng] for points
+          const coordinates = gps.map(p => [p[1], p[0]])
+          geometries.push({
+            type: 'Polygon',
+            coordinates,
+            properties: f.properties
+          })
         }
       })
 
-      if (allGeo.length < 3) return null
+      if (allGeo.length < 3) return { bounds: null, geometries: [] }
 
       const minLat = Math.min(...allGeo.map(p => p[1])), maxLat = Math.max(...allGeo.map(p => p[1]))
       const minLng = Math.min(...allGeo.map(p => p[0])), maxLng = Math.max(...allGeo.map(p => p[0]))
@@ -98,7 +108,7 @@ export default function Page() {
       const ySpan = maxY - minY
       const xSpan = maxX - minX
 
-      if (xSpan < 2 || ySpan < 2) return null 
+      if (xSpan < 2 || ySpan < 2) return { bounds: null, geometries: [] } 
 
       const degLngPerPix = lngSpan / xSpan
       const degLatPerPix = latSpan / ySpan 
@@ -113,11 +123,11 @@ export default function Page() {
         [Math.max(imageTopLat, imageBottomLat), Math.max(imageLeftLng, imageRightLng)]
       ]
 
-      if (isNaN(bounds[0][0]) || isNaN(bounds[0][1])) return null
-      return bounds
+      if (isNaN(bounds[0][0]) || isNaN(bounds[0][1])) return { bounds: null, geometries: [] }
+      return { bounds, geometries }
     } catch (e) {
-      console.error("Error parsing JSON bounds", e)
-      return null
+      console.error("Error parsing JSON data", e)
+      return { bounds: null, geometries: [] }
     }
   }
 
@@ -129,47 +139,79 @@ export default function Page() {
     const jsonFiles = files.filter(f => f.name.toLowerCase().endsWith('.json'))
 
     const newLayers: ImageryLayer[] = []
+    
+    // Group PNGs by their base name (without _pre_disaster or _post_disaster)
+    const baseNames = new Set<string>()
+    pngFiles.forEach(f => {
+      const name = f.name.toLowerCase()
+      baseNames.add(name.replace(/_(pre|post)_disaster\.png$/i, ''))
+    })
 
-    for (const png of pngFiles) {
-      const fileName = png.name.toLowerCase()
-      const baseName = fileName.replace(/\.(png|jpg|jpeg)$/i, '')
-      const isPost = fileName.includes('post_disaster')
-      const type = isPost ? 'post' : 'pre'
+    for (const base of baseNames) {
+      const prePng = pngFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('pre_disaster'))
+      const postPng = pngFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('post_disaster'))
       
-      const jsonMatch = jsonFiles.find(j => j.name.toLowerCase().replace('.json', '') === baseName)
-      let bounds: [[number, number], [number, number]] | undefined = undefined
+      const displayName = base.charAt(0).toUpperCase() + base.slice(1).replace(/(_|-)/g, ' ')
       
-      if (jsonMatch) {
-        const parsedBounds = await parseBoundsFromJson(jsonMatch)
-        if (parsedBounds) bounds = parsedBounds
+      let commonBounds: [[number, number], [number, number]] | undefined = undefined
+      let commonGeometries: any[] | undefined = undefined
+
+      // Try to get JSON data from either pre or post JSON file
+      const preJson = jsonFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('pre_disaster'))
+      const postJson = jsonFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('post_disaster'))
+      const targetJson = postJson || preJson
+
+      if (targetJson) {
+        const { bounds, geometries } = await parseJsonData(targetJson)
+        if (bounds) commonBounds = bounds
+        if (geometries.length > 0) commonGeometries = geometries
       }
 
-      const displayName = baseName.charAt(0).toUpperCase() + baseName.slice(1).replace(/(_|-)/g, ' ')
-      
-      let simulatedDamage: string | undefined = undefined
-      if (type === 'post') {
-        const levels = ["no-damage", "minor-damage", "major-damage", "destroyed"]
-        simulatedDamage = levels[Math.floor(Math.random() * levels.length)]
+      if (prePng) {
+        newLayers.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: `${displayName} (Pre)`,
+          url: URL.createObjectURL(prePng),
+          type: 'pre',
+          visible: false,
+          opacity: 1,
+          bounds: commonBounds,
+          highlighted: true,
+        })
       }
 
-      newLayers.push({
-        id: Math.random().toString(36).substr(2, 9),
-        name: displayName,
-        url: URL.createObjectURL(png),
-        type,
-        visible: true,
-        opacity: 1,
-        bounds,
-        highlighted: false,
-        damageLevel: simulatedDamage
-      })
+      if (postPng) {
+        newLayers.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: `${displayName} (Post)`,
+          url: URL.createObjectURL(postPng),
+          type: 'post',
+          visible: false,
+          opacity: 1,
+          bounds: commonBounds,
+          highlighted: true,
+        })
+      }
+
+      if (commonGeometries) {
+        newLayers.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: `${displayName} Buildings`,
+          type: 'buildings',
+          visible: true,
+          opacity: 1,
+          bounds: commonBounds,
+          highlighted: true,
+          geometries: commonGeometries
+        })
+      }
     }
 
     if (newLayers.length > 0) {
       setLayers(prev => [...prev, ...newLayers])
-      toast.success(`Successfully loaded ${newLayers.length} imagery layers`)
+      toast.success(`Successfully loaded ${newLayers.length} layers`)
     } else {
-      toast.error("No valid imagery files found. Ensure you select PNG files.")
+      toast.error("No valid imagery files found.")
     }
   }
 
@@ -188,7 +230,7 @@ export default function Page() {
     })
   }
 
-  const toggleAllByType = (type: 'pre' | 'post') => {
+  const toggleAllByType = (type: 'pre' | 'post' | 'buildings') => {
     setLayers(prev => {
       const anyVisible = prev.filter(l => l.type === type).some(l => l.visible)
       return prev.map(l => l.type === type ? { ...l, visible: !anyVisible } : l)
@@ -260,6 +302,17 @@ export default function Page() {
                   >
                     {layers.filter(l => l.type === 'post').some(l => l.visible) ? "Hide All Post" : "Show All Post"}
                   </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                      "h-8 text-[10px] font-black uppercase tracking-tighter transition-all col-span-2",
+                      layers.filter(l => l.type === 'buildings').some(l => l.visible) ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "opacity-50"
+                    )}
+                    onClick={() => toggleAllByType('buildings')}
+                  >
+                    {layers.filter(l => l.type === 'buildings').some(l => l.visible) ? "Hide All Buildings" : "Show All Buildings"}
+                  </Button>
                 </div>
               </div>
             )}
@@ -273,8 +326,7 @@ export default function Page() {
                         <div className="flex flex-col min-w-0">
                           <span className="text-xs font-bold truncate tracking-tight">{layer.name}</span>
                           <div className="flex items-center gap-1.5 mt-1">
-                            <Badge variant={layer.type === 'pre' ? "secondary" : "destructive"} className="text-[9px] h-4 px-1 uppercase font-black tracking-tighter">{layer.type}</Badge>
-                            {layer.damageLevel && <span className={cn("text-[10px] font-bold truncate", layer.damageLevel === "no-damage" ? "text-emerald-500" : layer.damageLevel === "minor-damage" ? "text-amber-500" : layer.damageLevel === "major-damage" ? "text-orange-500" : "text-destructive")}>• {layer.damageLevel.replace(/-/g, ' ')}</span>}
+                            <Badge variant={layer.type === 'pre' ? "secondary" : layer.type === 'post' ? "destructive" : "outline"} className={cn("text-[9px] h-4 px-1 uppercase font-black tracking-tighter", layer.type === 'buildings' && "border-emerald-500 text-emerald-500")}>{layer.type}</Badge>
                           </div>
                           {!layer.bounds && <span className="text-[9px] text-amber-500 font-bold mt-1 uppercase tracking-tighter">⚠️ Missing Geo-Metadata</span>}
                         </div>

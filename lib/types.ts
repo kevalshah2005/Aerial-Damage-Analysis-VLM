@@ -1,11 +1,11 @@
 export interface ImageryLayer {
   id: string
   name: string
-  url: string
-  type: 'pre' | 'post'
+  url?: string
+  type: 'pre' | 'post' | 'buildings'
   visible: boolean
   opacity: number
   highlighted?: boolean
   bounds?: [[number, number], [number, number]]
-  damageLevel?: string
+  geometries?: any[]
 }

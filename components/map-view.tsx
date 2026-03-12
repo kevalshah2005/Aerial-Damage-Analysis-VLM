@@ -51,6 +51,7 @@ export default function MapView({ className, layers = [] }: MapViewProps) {
   const mapInstanceRef = useRef<L.Map | null>(null)
   const baseLayerRef = useRef<L.TileLayer | null>(null)
   const imageryLayersRef = useRef<Record<string, L.ImageOverlay>>({})
+  const geometryLayersRef = useRef<Record<string, L.LayerGroup>>({})
   const highlightRefs = useRef<Record<string, L.Rectangle>>({})
   
   const [activeBaseLayer, setActiveBaseLayer] = useState(2)
@@ -101,44 +102,107 @@ export default function MapView({ className, layers = [] }: MapViewProps) {
 
     const map = mapInstanceRef.current
     const currentRefs = imageryLayersRef.current
+    const currentGeometries = geometryLayersRef.current
     const currentHighlights = highlightRefs.current
 
     // Remove layers and highlights that are no longer in the props or are hidden
-    Object.keys(currentRefs).forEach(id => {
+    const cleanup = (id: string) => {
       const layerData = layers.find(l => l.id === id)
       if (!layerData || !layerData.visible || !layerData.bounds) {
-        map.removeLayer(currentRefs[id])
-        delete currentRefs[id]
+        if (currentRefs[id]) {
+          map.removeLayer(currentRefs[id])
+          delete currentRefs[id]
+        }
         
+        if (currentGeometries[id]) {
+          map.removeLayer(currentGeometries[id])
+          delete currentGeometries[id]
+        }
+
         if (currentHighlights[id]) {
           map.removeLayer(currentHighlights[id])
           delete currentHighlights[id]
         }
       }
-    })
+    }
+
+    Object.keys(currentRefs).forEach(cleanup)
+    Object.keys(currentGeometries).forEach(cleanup)
+
 
     // Add or update layers from props
     layers.forEach(layer => {
-      if (layer.visible && layer.bounds) {
+      if (layer.bounds) {
         // Image Overlay sync
-        if (!currentRefs[layer.id]) {
-          const overlay = L.imageOverlay(layer.url, layer.bounds, {
-            opacity: layer.opacity,
-            interactive: true,
-            zIndex: layer.type === 'post' ? 1000 : 900,
-            alt: layer.name
-          }).addTo(map)
-          currentRefs[layer.id] = overlay
+        if (layer.visible && layer.url) {
+          if (!currentRefs[layer.id]) {
+            const overlay = L.imageOverlay(layer.url, layer.bounds, {
+              opacity: layer.opacity,
+              interactive: true,
+              zIndex: layer.type === 'post' ? 1000 : 900,
+              alt: layer.name
+            }).addTo(map)
+            currentRefs[layer.id] = overlay
 
-          if (Object.keys(currentRefs).length === 1 || layers.length === Object.keys(currentRefs).length) {
-            map.fitBounds(layer.bounds, { padding: [50, 50], maxZoom: 18 })
+            if (Object.keys(currentRefs).length === 1 || layers.length === Object.keys(currentRefs).length) {
+              map.fitBounds(layer.bounds, { padding: [50, 50], maxZoom: 18 })
+            }
+          } else {
+            currentRefs[layer.id].setOpacity(layer.opacity)
           }
-        } else {
-          currentRefs[layer.id].setOpacity(layer.opacity)
+        } else if (currentRefs[layer.id]) {
+          map.removeLayer(currentRefs[layer.id])
+          delete currentRefs[layer.id]
+        }
+
+        // Geometry sync
+        if (layer.visible && layer.geometries && layer.geometries.length > 0) {
+          if (!currentGeometries[layer.id]) {
+            const geoGroup = L.layerGroup().addTo(map)
+            
+            layer.geometries.forEach(geo => {
+              if (geo.type === 'Polygon') {
+                const subtype = geo.properties?.subtype || 'unknown'
+                const color = 
+                  subtype === 'no-damage' ? '#22c55e' : // Green
+                  subtype === 'minor-damage' ? '#f59e0b' : // Amber/Orange
+                  subtype === 'major-damage' ? '#ef4444' : // Red
+                  subtype === 'destroyed' ? '#7c3aed' : // Purple
+                  '#94a3b8' // Slate/Grey
+
+                L.polygon(geo.coordinates as L.LatLngExpression[], {
+                  color: color,
+                  weight: 1.5,
+                  fillColor: color,
+                  fillOpacity: layer.opacity * 0.5,
+                  opacity: layer.opacity,
+                  interactive: true,
+                  pane: 'markerPane'
+                })
+                .bindPopup(`Building ID: ${geo.properties?.uid}<br>Damage: ${subtype.replace(/-/g, ' ')}`)
+                .addTo(geoGroup)
+              }
+            })
+            
+            currentGeometries[layer.id] = geoGroup
+          } else {
+            // Update opacity for existing geometries
+            currentGeometries[layer.id].eachLayer((l: any) => {
+              if (l.setStyle) {
+                l.setStyle({ 
+                  fillOpacity: layer.opacity * 0.5,
+                  opacity: layer.opacity 
+                })
+              }
+            })
+          }
+        } else if (currentGeometries[layer.id]) {
+          map.removeLayer(currentGeometries[layer.id])
+          delete currentGeometries[layer.id]
         }
 
         // Highlight sync
-        if (layer.highlighted && !currentHighlights[layer.id]) {
+        if (layer.visible && layer.highlighted && !currentHighlights[layer.id]) {
           const rect = L.rectangle(layer.bounds, {
             color: "#ef4444", 
             weight: 2,
