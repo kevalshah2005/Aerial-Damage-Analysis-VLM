@@ -4,3 +4,6 @@ node_modules/
 .env*.local
 .DS_Store
 .worktree
+content/images-and-labels/labels
+content/images-and-labels/images
+content/images-and-labels/vis_labels

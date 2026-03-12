@@ -53,7 +53,7 @@ export default function MapView({ className, layers = [] }: MapViewProps) {
   const imageryLayersRef = useRef<Record<string, L.ImageOverlay>>({})
   const highlightRefs = useRef<Record<string, L.Rectangle>>({})
   
-  const [activeBaseLayer, setActiveBaseLayer] = useState(0)
+  const [activeBaseLayer, setActiveBaseLayer] = useState(2)
   const [showLayerPicker, setShowLayerPicker] = useState(false)
   const [coordinates, setCoordinates] = useState({ lat: 29.7604, lng: -95.3698 })
   const [zoom, setZoom] = useState(12)
@@ -70,7 +70,7 @@ export default function MapView({ className, layers = [] }: MapViewProps) {
       attributionControl: false,
     })
 
-    const tileLayer = L.tileLayer(BASE_LAYERS[0].url, {
+    const tileLayer = L.tileLayer(BASE_LAYERS[2].url, {
       maxZoom: 19,
     }).addTo(map)
 
