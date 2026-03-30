@@ -1,0 +1,37 @@
+[
+  {
+    "id": "hurricane-florence_00000125_vis",
+    "image_pre": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/hurricane-florence_00000125_pre_disaster_vis.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/hurricane-florence_00000125_post_disaster_vis.png",
+    "status": "error",
+    "error": "The model returned the following errors: {\"error\":{\"code\":\"validation_error\",\"message\":\"Failed to buffer the request body: length limit exceeded\",\"param\":null,\"type\":\"invalid_request_error\"}}"
+  },
+  {
+    "id": "hurricane-harvey_00000011_vis",
+    "image_pre": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/hurricane-harvey_00000011_pre_disaster_vis.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/hurricane-harvey_00000011_post_disaster_vis.png",
+    "status": "error",
+    "error": "The model returned the following errors: {\"error\":{\"code\":\"validation_error\",\"message\":\"Failed to buffer the request body: length limit exceeded\",\"param\":null,\"type\":\"invalid_request_error\"}}"
+  },
+  {
+    "id": "hurricane-matthew_00000345_vis",
+    "image_pre": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/hurricane-matthew_00000345_pre_disaster_vis.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/hurricane-matthew_00000345_post_disaster_vis.png",
+    "status": "error",
+    "error": "The model returned the following errors: {\"error\":{\"code\":\"validation_error\",\"message\":\"Failed to buffer the request body: length limit exceeded\",\"param\":null,\"type\":\"invalid_request_error\"}}"
+  },
+  {
+    "id": "socal-fire_00000170_vis",
+    "image_pre": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/socal-fire_00000170_pre_disaster_vis.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/socal-fire_00000170_post_disaster_vis.png",
+    "status": "error",
+    "error": "The model returned the following errors: {\"error\":{\"code\":\"validation_error\",\"message\":\"Failed to buffer the request body: length limit exceeded\",\"param\":null,\"type\":\"invalid_request_error\"}}"
+  },
+  {
+    "id": "socal-fire_00000625_vis",
+    "image_pre": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/socal-fire_00000625_pre_disaster_vis.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/Aerial-Damage-Analysis-VLM/example_labeled_data/socal-fire_00000625_post_disaster_vis.png",
+    "status": "error",
+    "error": "The model returned the following errors: {\"error\":{\"code\":\"validation_error\",\"message\":\"Failed to buffer the request body: length limit exceeded\",\"param\":null,\"type\":\"invalid_request_error\"}}"
+  }
+]

@@ -75,5 +75,13 @@
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "5.7.3"
-  }
+  },
+  "description": "A Next.js 16 application featuring an interactive geospatial dashboard with an integrated AI chatbot.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "guatemala-volcano_00000003_88703461",
+    "image_pre": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000003_88703461_pre.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000003_88703461_post.png",
+    "status": "success",
+    "damage_label": "Minor Damage",
+    "confidence_score": "75",
+    "justification": "Image B shows a noticeable difference in the roofline compared to Image A, with what appears to be a section of the roof missing or damaged. While the overall structure seems intact, this indicates some level of damage beyond just superficial issues."
+  },
+  {
+    "id": "guatemala-volcano_00000003_9f8f8916",
+    "image_pre": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000003_9f8f8916_pre.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000003_9f8f8916_post.png",
+    "status": "success",
+    "damage_label": "Minor Damage",
+    "confidence_score": "85%",
+    "justification": "Image B shows a noticeable amount of debris scattered across the roof, particularly along the edges, which is not present in Image A. While the overall structure appears intact, the debris indicates some level of damage likely caused by wind or impact."
+  },
+  {
+    "id": "guatemala-volcano_00000003_e168e405",
+    "image_pre": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000003_e168e405_pre.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000003_e168e405_post.png",
+    "status": "success",
+    "damage_label": "Major Damage",
+    "confidence_score": "95",
+    "justification": "Image A shows a clearly defined building structure, while Image B presents a heavily obscured and indistinct view, suggesting significant structural failure and likely partial collapse due to the disaster."
+  },
+  {
+    "id": "guatemala-volcano_00000005_b991324d",
+    "image_pre": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000005_b991324d_pre.png",
+    "image_post": "/Users/duct.nguyen/Senior Project/cropped_buildings/guatemala-volcano_00000005_b991324d_post.png",
+    "status": "success",
+    "damage_label": "Major Damage",
+    "confidence_score": "85",
+    "justification": "Image A shows a clearly defined building structure, while Image B exhibits a significantly altered shape and a much darker appearance, indicating substantial collapse and debris accumulation, suggesting major structural damage."
+  }
+]
