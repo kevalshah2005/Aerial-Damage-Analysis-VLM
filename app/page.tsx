@@ -1,31 +1,16 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthenticator } from "@aws-amplify/ui-react"
-import { UploadCloud, Trash2, ChevronRight, Layers as LayersIcon, Map as MapIcon, Target, Square, Focus } from "lucide-react"
+import { Map as MapIcon } from "lucide-react"
 import dynamic from "next/dynamic"
 
 import DashboardHeader from "@/components/dashboard-header"
 import ChatPanel from "@/components/chat-panel"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import { ImageryLayer } from "@/lib/types"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
-import { toast } from "sonner"
+import { DatasetManifest } from "@/lib/types"
 
-// Dynamically import MapView with SSR disabled to avoid "window is not defined" error from Leaflet
-const MapView = dynamic(() => import("@/components/map-view"), { 
+const MapView = dynamic(() => import("@/components/map-view"), {
   ssr: false,
   loading: () => (
     <div className="h-full w-full bg-muted animate-pulse flex items-center justify-center">
@@ -41,205 +26,27 @@ export default function Page() {
   const { authStatus } = useAuthenticator(context => [context.authStatus])
   const router = useRouter()
   const [chatOpen, setChatOpen] = useState(true)
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [layers, setLayers] = useState<ImageryLayer[]>([])
-  const prevUrlsRef = useRef<Set<string>>(new Set())
 
-  // Clean up Blob URLs
+  const [manifest, setManifest] = useState<DatasetManifest | null>(null)
+  const [datasetPreVisible, setDatasetPreVisible] = useState(false)
+  const [datasetPostVisible, setDatasetPostVisible] = useState(false)
+  const [datasetBuildingsVisible, setDatasetBuildingsVisible] = useState(false)
+  const [datasetPreOpacity, setDatasetPreOpacity] = useState(1)
+  const [datasetPostOpacity, setDatasetPostOpacity] = useState(1)
+  const [datasetBuildingsOpacity, setDatasetBuildingsOpacity] = useState(1)
+
   useEffect(() => {
-    const currentUrls = new Set<string>()
-    layers.forEach(l => { if (l.url) currentUrls.add(l.url) })
-    Array.from(prevUrlsRef.current).filter(url => !currentUrls.has(url)).forEach(url => {
-      try { if (url.startsWith('blob:')) URL.revokeObjectURL(url) } catch (e) {}
-    })
-    prevUrlsRef.current = currentUrls
-  }, [layers])
+    fetch("/api/dataset/manifest")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data) setManifest(data)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') router.push('/auth')
   }, [authStatus, router])
-
-  const parseJsonData = async (file: File): Promise<{ bounds: [[number, number], [number, number]] | null, geometries: any[] }> => {
-    try {
-      const text = await file.text()
-      const data = JSON.parse(text)
-      const lngLats = data?.features?.lng_lat
-      const xys = data?.features?.xy
-      const geometries: any[] = []
-      
-      if (!lngLats || !xys || lngLats.length === 0 || xys.length === 0) return { bounds: null, geometries: [] }
-
-      const getPoints = (wkt: string) => {
-        const match = wkt.match(/\(\((.*?)\)\)/)
-        return match ? match[1].split(',').map(p => p.trim().split(' ').map(Number)) : []
-      }
-
-      let allGeo: [number, number][] = []
-      let allPixel: [number, number][] = []
-
-      lngLats.forEach((f: any, i: number) => {
-        const gps = getPoints(f.wkt)
-        const pxs = getPoints(xys[i].wkt)
-        if (gps.length === pxs.length) {
-          allGeo.push(...gps as [number, number][])
-          allPixel.push(...pxs as [number, number][])
-          
-          // Store geometry for map visualization
-          // Leaflet expects [lat, lng] for points
-          const coordinates = gps.map(p => [p[1], p[0]])
-          geometries.push({
-            type: 'Polygon',
-            coordinates,
-            properties: f.properties
-          })
-        }
-      })
-
-      if (allGeo.length < 3) return { bounds: null, geometries: [] }
-
-      const minLat = Math.min(...allGeo.map(p => p[1])), maxLat = Math.max(...allGeo.map(p => p[1]))
-      const minLng = Math.min(...allGeo.map(p => p[0])), maxLng = Math.max(...allGeo.map(p => p[0]))
-      const minX = Math.min(...allPixel.map(p => p[0])), maxX = Math.max(...allPixel.map(p => p[0]))
-      const minY = Math.min(...allPixel.map(p => p[1])), maxY = Math.max(...allPixel.map(p => p[1]))
-
-      const latSpan = maxLat - minLat
-      const lngSpan = maxLng - minLng
-      const ySpan = maxY - minY
-      const xSpan = maxX - minX
-
-      if (xSpan < 2 || ySpan < 2) return { bounds: null, geometries: [] } 
-
-      const degLngPerPix = lngSpan / xSpan
-      const degLatPerPix = latSpan / ySpan 
-
-      const imageTopLat = maxLat + (minY * degLatPerPix)
-      const imageBottomLat = imageTopLat - (1024 * degLatPerPix)
-      const imageLeftLng = minLng - (minX * degLngPerPix)
-      const imageRightLng = imageLeftLng + (1024 * degLngPerPix)
-
-      const bounds: [[number, number], [number, number]] = [
-        [Math.min(imageTopLat, imageBottomLat), Math.min(imageLeftLng, imageRightLng)],
-        [Math.max(imageTopLat, imageBottomLat), Math.max(imageLeftLng, imageRightLng)]
-      ]
-
-      if (isNaN(bounds[0][0]) || isNaN(bounds[0][1])) return { bounds: null, geometries: [] }
-      return { bounds, geometries }
-    } catch (e) {
-      console.error("Error parsing JSON data", e)
-      return { bounds: null, geometries: [] }
-    }
-  }
-
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-
-    const pngFiles = files.filter(f => f.name.toLowerCase().endsWith('.png'))
-    const jsonFiles = files.filter(f => f.name.toLowerCase().endsWith('.json'))
-
-    const newLayers: ImageryLayer[] = []
-    
-    // Group PNGs by their base name (without _pre_disaster or _post_disaster)
-    const baseNames = new Set<string>()
-    pngFiles.forEach(f => {
-      const name = f.name.toLowerCase()
-      baseNames.add(name.replace(/_(pre|post)_disaster\.png$/i, ''))
-    })
-
-    for (const base of baseNames) {
-      const prePng = pngFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('pre_disaster'))
-      const postPng = pngFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('post_disaster'))
-      
-      const displayName = base.charAt(0).toUpperCase() + base.slice(1).replace(/(_|-)/g, ' ')
-      
-      let commonBounds: [[number, number], [number, number]] | undefined = undefined
-      let commonGeometries: any[] | undefined = undefined
-
-      // Try to get JSON data from either pre or post JSON file
-      const preJson = jsonFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('pre_disaster'))
-      const postJson = jsonFiles.find(f => f.name.toLowerCase().includes(base) && f.name.toLowerCase().includes('post_disaster'))
-      const targetJson = postJson || preJson
-
-      if (targetJson) {
-        const { bounds, geometries } = await parseJsonData(targetJson)
-        if (bounds) commonBounds = bounds
-        if (geometries.length > 0) commonGeometries = geometries
-      }
-
-      if (prePng) {
-        newLayers.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: `${displayName} (Pre)`,
-          url: URL.createObjectURL(prePng),
-          type: 'pre',
-          visible: false,
-          opacity: 1,
-          bounds: commonBounds,
-          highlighted: true,
-        })
-      }
-
-      if (postPng) {
-        newLayers.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: `${displayName} (Post)`,
-          url: URL.createObjectURL(postPng),
-          type: 'post',
-          visible: false,
-          opacity: 1,
-          bounds: commonBounds,
-          highlighted: true,
-        })
-      }
-
-      if (commonGeometries) {
-        newLayers.push({
-          id: Math.random().toString(36).substr(2, 9),
-          name: `${displayName} Buildings`,
-          type: 'buildings',
-          visible: true,
-          opacity: 1,
-          bounds: commonBounds,
-          highlighted: true,
-          geometries: commonGeometries
-        })
-      }
-    }
-
-    if (newLayers.length > 0) {
-      setLayers(prev => [...prev, ...newLayers])
-      toast.success(`Successfully loaded ${newLayers.length} layers`)
-    } else {
-      toast.error("No valid imagery files found.")
-    }
-  }
-
-  const toggleLayer = useCallback((id: string) => {
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l))
-  }, [])
-
-  const toggleHighlight = (id: string) => {
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, highlighted: !l.highlighted } : l))
-  }
-
-  const toggleAllHighlights = () => {
-    setLayers(prev => {
-      const anyHighlighted = prev.some(l => l.highlighted)
-      return prev.map(l => ({ ...l, highlighted: !anyHighlighted }))
-    })
-  }
-
-  const toggleAllByType = (type: 'pre' | 'post' | 'buildings') => {
-    setLayers(prev => {
-      const anyVisible = prev.filter(l => l.type === type).some(l => l.visible)
-      return prev.map(l => l.type === type ? { ...l, visible: !anyVisible } : l)
-    })
-  }
-
-  const removeLayer = (id: string) => {
-    setLayers(prev => prev.filter(l => l.id !== id))
-  }
 
   if (authStatus === 'configuring' || authStatus === 'unauthenticated') {
     return <div className="flex h-screen items-center justify-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
@@ -247,137 +54,25 @@ export default function Page() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
-      <DashboardHeader 
-        chatOpen={chatOpen} 
-        onToggleChat={() => setChatOpen(!chatOpen)}
-        leftPanelOpen={leftPanelOpen}
-        onToggleLeftPanel={() => setLeftPanelOpen(!leftPanelOpen)}
-      />
+      <DashboardHeader chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        {/* SIDEBAR: Layer Management */}
-        {leftPanelOpen && (
-          <div className="w-96 border-r border-border bg-card/50 hidden lg:flex flex-col shrink-0 overflow-hidden relative z-20">
-            <div className="p-4 border-b border-border flex items-center justify-between bg-card">
-              <div className="flex items-center gap-2 font-bold text-sm tracking-tight">
-                <LayersIcon className="h-4 w-4 text-primary" />
-                <span>Layer Manager</span>
-              </div>
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-bold">{layers.length}</Badge>
-            </div>
-
-            {/* Master Toggles */}
-            {layers.length > 0 && (
-              <div className="px-4 py-3 bg-muted/20 border-b border-border space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center justify-between">
-                  <span>Master Controls</span>
-                  <button 
-                    onClick={toggleAllHighlights}
-                    className="text-[9px] hover:text-primary transition-colors flex items-center gap-1 font-bold"
-                  >
-                    <Square className={cn("h-2.5 w-2.5", layers.some(l => l.highlighted) && "fill-primary text-primary")} />
-                    {layers.some(l => l.highlighted) ? "Unhighlight All" : "Highlight All"}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                      "h-8 text-[10px] font-black uppercase tracking-tighter transition-all",
-                      layers.filter(l => l.type === 'pre').some(l => l.visible) ? "bg-secondary/50 border-secondary-foreground/20" : "opacity-50"
-                    )}
-                    onClick={() => toggleAllByType('pre')}
-                  >
-                    {layers.filter(l => l.type === 'pre').some(l => l.visible) ? "Hide All Pre" : "Show All Pre"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                      "h-8 text-[10px] font-black uppercase tracking-tighter transition-all",
-                      layers.filter(l => l.type === 'post').some(l => l.visible) ? "bg-destructive/10 border-destructive/20 text-destructive" : "opacity-50"
-                    )}
-                    onClick={() => toggleAllByType('post')}
-                  >
-                    {layers.filter(l => l.type === 'post').some(l => l.visible) ? "Hide All Post" : "Show All Post"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                      "h-8 text-[10px] font-black uppercase tracking-tighter transition-all col-span-2",
-                      layers.filter(l => l.type === 'buildings').some(l => l.visible) ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "opacity-50"
-                    )}
-                    onClick={() => toggleAllByType('buildings')}
-                  >
-                    {layers.filter(l => l.type === 'buildings').some(l => l.visible) ? "Hide All Buildings" : "Show All Buildings"}
-                  </Button>
-                </div>
-              </div>
-            )}
-            
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4">
-                {layers.length > 0 ? (
-                  layers.map((layer) => (
-                    <div key={layer.id} className={cn("group p-3 rounded-xl border transition-all duration-200", layer.visible ? "bg-card border-primary/20 shadow-sm" : "bg-muted/30 border-transparent opacity-60 hover:opacity-100")}>
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-bold truncate tracking-tight">{layer.name}</span>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <Badge variant={layer.type === 'pre' ? "secondary" : layer.type === 'post' ? "destructive" : "outline"} className={cn("text-[9px] h-4 px-1 uppercase font-black tracking-tighter", layer.type === 'buildings' && "border-emerald-500 text-emerald-500")}>{layer.type}</Badge>
-                          </div>
-                          {!layer.bounds && <span className="text-[9px] text-amber-500 font-bold mt-1 uppercase tracking-tighter">⚠️ Missing Geo-Metadata</span>}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => toggleHighlight(layer.id)}
-                            className={cn("h-7 w-7 transition-colors", layer.highlighted ? "text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted")}
-                            title="Highlight on map"
-                          >
-                            <Square className={cn("h-3.5 w-3.5", layer.highlighted && "fill-primary")} />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => toggleLayer(layer.id)} className="h-7 w-7 hover:bg-primary/10 hover:text-primary">{layer.visible ? <LayersIcon className="h-3.5 w-3.5" /> : <LayersIcon className="h-3.5 w-3.5 opacity-40" />}</Button>
-                          <Button variant="ghost" size="icon" onClick={() => removeLayer(layer.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center border-2 border-dashed border-border rounded-2xl bg-muted/20">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mb-3"><UploadCloud className="h-5 w-5 text-primary/60" /></div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">No Layers Active</p>
-                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">Upload PNG + JSON imagery to begin analysis.</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-
-            <div className="p-4 border-t border-border bg-card">
-              <input type="file" multiple ref={fileInputRef} onChange={handleBulkUpload} className="hidden" accept=".png,.json" />
-              <div className="grid grid-cols-2 gap-2">
-                <Button onClick={() => fileInputRef.current?.click()} className="h-9 gap-2 font-bold text-xs"><UploadCloud className="h-4 w-4" /><span>Upload</span></Button>
-                <Button onClick={() => setLayers([])} variant="outline" className="h-9 gap-2 text-muted-foreground hover:text-destructive transition-all text-xs font-bold"><Trash2 className="h-4 w-4" /><span>Clear</span></Button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="flex-1 min-w-0 h-full relative">
-          <MapView layers={layers} onToggleLayer={toggleLayer} />
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] hidden sm:flex">
-             <div className="px-4 py-1.5 rounded-full bg-card/80 backdrop-blur-md border border-border shadow-2xl flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Mission Active</span>
-                </div>
-                <Separator orientation="vertical" className="h-3" />
-                <span className="text-[10px] font-bold text-muted-foreground italic">{layers.filter(l => l.visible).length} layers deployed</span>
-             </div>
-          </div>
+          <MapView
+            manifest={manifest}
+            datasetPreVisible={datasetPreVisible}
+            datasetPostVisible={datasetPostVisible}
+            datasetBuildingsVisible={datasetBuildingsVisible}
+            datasetPreOpacity={datasetPreOpacity}
+            datasetPostOpacity={datasetPostOpacity}
+            datasetBuildingsOpacity={datasetBuildingsOpacity}
+            onToggleDatasetPre={() => setDatasetPreVisible(v => !v)}
+            onToggleDatasetPost={() => setDatasetPostVisible(v => !v)}
+            onToggleDatasetBuildings={() => setDatasetBuildingsVisible(v => !v)}
+            onSetDatasetPreOpacity={setDatasetPreOpacity}
+            onSetDatasetPostOpacity={setDatasetPostOpacity}
+            onSetDatasetBuildingsOpacity={setDatasetBuildingsOpacity}
+          />
         </div>
 
         {chatOpen && <div className="w-[400px] border-l border-border shrink-0 hidden md:block bg-card/50 backdrop-blur-md relative z-10 shadow-2xl"><ChatPanel /></div>}
