@@ -1,0 +1,1152 @@
+{
+  "metrics": {
+    "amazon.nova-pro-v1:0": {
+      "accuracy": "5.41%",
+      "classMetrics": {
+        "No Damage": {
+          "precision": "0.00%",
+          "recall": "0.00%",
+          "f1": "0.00%"
+        },
+        "Minor Damage": {
+          "precision": "0.00%",
+          "recall": "0.00%",
+          "f1": "0.00%"
+        },
+        "Major Damage": {
+          "precision": "8.70%",
+          "recall": "100.00%",
+          "f1": "16.00%"
+        },
+        "Destroyed": {
+          "precision": "0.00%",
+          "recall": "0.00%",
+          "f1": "0.00%"
+        }
+      },
+      "confusionMatrix": {
+        "No Damage": {
+          "No Damage": 0,
+          "Minor Damage": 2,
+          "Major Damage": 17,
+          "Destroyed": 6
+        },
+        "Minor Damage": {
+          "No Damage": 0,
+          "Minor Damage": 0,
+          "Major Damage": 4,
+          "Destroyed": 6
+        },
+        "Major Damage": {
+          "No Damage": 0,
+          "Minor Damage": 0,
+          "Major Damage": 2,
+          "Destroyed": 0
+        },
+        "Destroyed": {
+          "No Damage": 0,
+          "Minor Damage": 0,
+          "Major Damage": 0,
+          "Destroyed": 0
+        }
+      }
+    },
+    "google.gemma-3-12b-it": {
+      "accuracy": "5.41%",
+      "classMetrics": {
+        "No Damage": {
+          "precision": "0.00%",
+          "recall": "0.00%",
+          "f1": "0.00%"
+        },
+        "Minor Damage": {
+          "precision": "0.00%",
+          "recall": "0.00%",
+          "f1": "0.00%"
+        },
+        "Major Damage": {
+          "precision": "8.00%",
+          "recall": "100.00%",
+          "f1": "14.81%"
+        },
+        "Destroyed": {
+          "precision": "0.00%",
+          "recall": "0.00%",
+          "f1": "0.00%"
+        }
+      },
+      "confusionMatrix": {
+        "No Damage": {
+          "No Damage": 0,
+          "Minor Damage": 2,
+          "Major Damage": 17,
+          "Destroyed": 6
+        },
+        "Minor Damage": {
+          "No Damage": 0,
+          "Minor Damage": 0,
+          "Major Damage": 6,
+          "Destroyed": 4
+        },
+        "Major Damage": {
+          "No Damage": 0,
+          "Minor Damage": 0,
+          "Major Damage": 2,
+          "Destroyed": 0
+        },
+        "Destroyed": {
+          "No Damage": 0,
+          "Minor Damage": 0,
+          "Major Damage": 0,
+          "Destroyed": 0
+        }
+      }
+    }
+  },
+  "details": {
+    "amazon.nova-pro-v1:0": [
+      {
+        "uid": "4f994029-6628-438a-9aba-b5c3241cda6b",
+        "status": "success",
+        "actual_label": "Major Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural deformation and misalignment, indicating a major structural failure."
+      },
+      {
+        "uid": "6ffd4931-2eef-4066-a43d-181c1ee279e3",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a grassy area with no visible remnants of the building structure that was present in Image A, indicating a complete collapse."
+      },
+      {
+        "uid": "8d64bc46-4a78-4d76-8936-5150c7084ca8",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows a significant portion of the roof missing and the structure appears to have collapsed on one side, indicating major structural damage."
+      },
+      {
+        "uid": "f28146ee-4813-4006-81ba-5636c24d14af",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the roof and walls missing, indicating a substantial loss of structural integrity compared to Image A."
+      },
+      {
+        "uid": "9bc75a7c-eb60-48c3-8b5b-c98dded9e428",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95%",
+        "justification": "The post-disaster image shows a significant portion of the building's facade has collapsed or been severely damaged, indicating major structural failure."
+      },
+      {
+        "uid": "a7c78e7b-bf31-43f8-b324-0b311b23205f",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Minor Damage",
+        "confidence_score": "90%",
+        "justification": "The building's structure remains intact, but there is noticeable debris and slight changes in the appearance of the roof and surrounding area, indicating minor damage."
+      },
+      {
+        "uid": "63ef12ea-d780-4814-bb91-ea33cf0d6353",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Minor Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows some changes in the roof and wall areas, but the overall structure remains intact with no significant collapse or major structural failure."
+      },
+      {
+        "uid": "d99c8528-f9b1-42f2-b996-1d6d6f4902e1",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural changes, including a distorted roof and missing sections, indicating substantial damage but not complete collapse."
+      },
+      {
+        "uid": "03623244-1d89-426c-9f1e-9d313124ec7b",
+        "status": "success",
+        "actual_label": "Major Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the building missing and a noticeable collapse, indicating major damage."
+      },
+      {
+        "uid": "44521f03-0b69-4282-a1c3-83eef7afc3e7",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a flat, featureless area where the building once stood, indicating a complete collapse."
+      },
+      {
+        "uid": "21bf79ae-52ec-469c-b0dd-ca96d68235a9",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a rubble pile and no discernible structure, indicating a complete collapse compared to the intact building in Image A."
+      },
+      {
+        "uid": "b118abe7-b5b1-450c-a7e2-36d471c3b693",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural failure with parts of the building missing and a noticeable collapse of the roof and walls compared to Image A."
+      },
+      {
+        "uid": "abca6560-e04a-449f-9f9f-848a6556cc0e",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural changes with portions of the building missing and a noticeable collapse of the roof and walls, indicating major damage."
+      },
+      {
+        "uid": "f4ce8cda-e80b-42e8-b483-302360d7e6e0",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with parts of the building missing and debris scattered, indicating a substantial loss of the building's integrity compared to Image A."
+      },
+      {
+        "uid": "e3f3dd1e-b4f8-4a45-be42-dcf1ff6f092c",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows no recognizable structure where the building once stood, indicating a complete collapse."
+      },
+      {
+        "uid": "61a92788-0592-41e7-93af-9a59633c4a74",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a pile of rubble where the building once stood, indicating a complete collapse."
+      },
+      {
+        "uid": "68489c40-a780-4875-b436-ebca404f3f22",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural changes, including partial collapse and substantial debris, indicating major damage to the building."
+      },
+      {
+        "uid": "6b615879-85bc-4a1f-922b-f02719902421",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the roof and walls missing, indicating a substantial loss of structural integrity compared to Image A."
+      },
+      {
+        "uid": "4467c793-2f36-4415-a3fd-c1245636c1b3",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the roof and walls missing, indicating a substantial level of damage compared to Image A."
+      },
+      {
+        "uid": "fe70a31b-87d7-4370-9360-ce586ffd1047",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the roof and walls missing, indicating a substantial loss of structural integrity compared to Image A."
+      },
+      {
+        "uid": "6edaaabd-fe22-4f1e-87f2-2c324a2315de",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the roof and walls missing, indicating a substantial loss of structural integrity compared to Image A."
+      },
+      {
+        "uid": "5192912f-a120-455c-9bf9-ac7d8231b696",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a flat, featureless surface where the building once stood, indicating a complete collapse."
+      },
+      {
+        "uid": "16731f39-b796-4de0-9925-b1dccc9dcbe8",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural changes, with parts of the building appearing collapsed or severely damaged, indicating major structural failure."
+      },
+      {
+        "uid": "c4a161fe-1329-4f56-97eb-48b931cd7643",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural failure with portions of the building missing and a noticeable collapse of the roof and walls, indicating major damage."
+      },
+      {
+        "uid": "fa595f54-9ed8-445b-aace-847b8975b36d",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural changes with portions of the building missing or collapsed, indicating major damage."
+      },
+      {
+        "uid": "93f6f688-13f6-45e7-8e1d-5265ba28e936",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows no recognizable structure where the building was located in Image A, indicating a complete collapse."
+      },
+      {
+        "uid": "ead5e4f9-0326-4540-b7f2-17513acf0e88",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the building missing, indicating a major collapse, compared to the intact structure in Image A."
+      },
+      {
+        "uid": "6bc0c2bc-1af9-4307-9cee-1b0aa628b394",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with portions of the building missing, indicating a partial collapse and substantial damage to the roof and walls."
+      },
+      {
+        "uid": "7a3b0d29-c51c-4b80-9ba7-46113e94ba9c",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with parts of the roof and walls missing, indicating a substantial loss of structural integrity compared to Image A."
+      },
+      {
+        "uid": "8c435808-f83e-4170-acdf-0fea4552e8ba",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "The post-disaster image shows only a few scattered remnants of the building, indicating a near-complete collapse compared to the intact structure in the pre-disaster image."
+      },
+      {
+        "uid": "18cf09ef-34d0-4452-870b-f8c726482bf9",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows no discernible structure where the building was located in Image A, indicating a complete collapse."
+      },
+      {
+        "uid": "92d45daf-5d1b-4fb1-bf12-cadbbe65dbcb",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with large portions of the building missing, indicating a major collapse compared to the intact structure in Image A."
+      },
+      {
+        "uid": "a1fa9e2c-b262-4f4c-808d-401e1dcd9ddc",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a rubble pile where the building once stood, indicating a complete collapse."
+      },
+      {
+        "uid": "001fbd6c-83af-44c6-84ac-b11e23f9eb94",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a rubble pile where the building once stood, indicating a complete collapse."
+      },
+      {
+        "uid": "0122a35c-035b-4a85-950c-5acabe42224d",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95%",
+        "justification": "Image B shows only a rubble pile where the building once stood, indicating a complete collapse."
+      },
+      {
+        "uid": "977e9bb6-1d41-436d-b3f3-4308f3a0cadb",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "Image B shows significant structural changes with parts of the building missing and debris scattered, indicating a substantial loss of the building's integrity compared to Image A."
+      },
+      {
+        "uid": "fe71823d-66f5-4b88-879e-80015beed59f",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "90%",
+        "justification": "The post-disaster image shows significant structural changes, including a partial collapse of the roof and visible damage to the walls, indicating major damage."
+      }
+    ],
+    "anthropic.claude-3-5-sonnet-20241022-v2:0": [
+      {
+        "uid": "4f994029-6628-438a-9aba-b5c3241cda6b",
+        "status": "error",
+        "actual_label": "Major Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "6ffd4931-2eef-4066-a43d-181c1ee279e3",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "8d64bc46-4a78-4d76-8936-5150c7084ca8",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "f28146ee-4813-4006-81ba-5636c24d14af",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "9bc75a7c-eb60-48c3-8b5b-c98dded9e428",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "a7c78e7b-bf31-43f8-b324-0b311b23205f",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "63ef12ea-d780-4814-bb91-ea33cf0d6353",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "d99c8528-f9b1-42f2-b996-1d6d6f4902e1",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "03623244-1d89-426c-9f1e-9d313124ec7b",
+        "status": "error",
+        "actual_label": "Major Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "44521f03-0b69-4282-a1c3-83eef7afc3e7",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "21bf79ae-52ec-469c-b0dd-ca96d68235a9",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "b118abe7-b5b1-450c-a7e2-36d471c3b693",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "abca6560-e04a-449f-9f9f-848a6556cc0e",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "f4ce8cda-e80b-42e8-b483-302360d7e6e0",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "e3f3dd1e-b4f8-4a45-be42-dcf1ff6f092c",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "61a92788-0592-41e7-93af-9a59633c4a74",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "68489c40-a780-4875-b436-ebca404f3f22",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "6b615879-85bc-4a1f-922b-f02719902421",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "4467c793-2f36-4415-a3fd-c1245636c1b3",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "fe70a31b-87d7-4370-9360-ce586ffd1047",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "6edaaabd-fe22-4f1e-87f2-2c324a2315de",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "5192912f-a120-455c-9bf9-ac7d8231b696",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "16731f39-b796-4de0-9925-b1dccc9dcbe8",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "c4a161fe-1329-4f56-97eb-48b931cd7643",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "fa595f54-9ed8-445b-aace-847b8975b36d",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "93f6f688-13f6-45e7-8e1d-5265ba28e936",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "ead5e4f9-0326-4540-b7f2-17513acf0e88",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "6bc0c2bc-1af9-4307-9cee-1b0aa628b394",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "7a3b0d29-c51c-4b80-9ba7-46113e94ba9c",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "8c435808-f83e-4170-acdf-0fea4552e8ba",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "18cf09ef-34d0-4452-870b-f8c726482bf9",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "92d45daf-5d1b-4fb1-bf12-cadbbe65dbcb",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "a1fa9e2c-b262-4f4c-808d-401e1dcd9ddc",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "001fbd6c-83af-44c6-84ac-b11e23f9eb94",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "0122a35c-035b-4a85-950c-5acabe42224d",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "977e9bb6-1d41-436d-b3f3-4308f3a0cadb",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      },
+      {
+        "uid": "fe71823d-66f5-4b88-879e-80015beed59f",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "This model version has reached the end of its life. Please refer to the AWS documentation for more details."
+      }
+    ],
+    "meta.llama3-2-11b-instruct-v1:0": [
+      {
+        "uid": "4f994029-6628-438a-9aba-b5c3241cda6b",
+        "status": "error",
+        "actual_label": "Major Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "6ffd4931-2eef-4066-a43d-181c1ee279e3",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "8d64bc46-4a78-4d76-8936-5150c7084ca8",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "f28146ee-4813-4006-81ba-5636c24d14af",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "9bc75a7c-eb60-48c3-8b5b-c98dded9e428",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "a7c78e7b-bf31-43f8-b324-0b311b23205f",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "63ef12ea-d780-4814-bb91-ea33cf0d6353",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "d99c8528-f9b1-42f2-b996-1d6d6f4902e1",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "03623244-1d89-426c-9f1e-9d313124ec7b",
+        "status": "error",
+        "actual_label": "Major Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "44521f03-0b69-4282-a1c3-83eef7afc3e7",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "21bf79ae-52ec-469c-b0dd-ca96d68235a9",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "b118abe7-b5b1-450c-a7e2-36d471c3b693",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "abca6560-e04a-449f-9f9f-848a6556cc0e",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "f4ce8cda-e80b-42e8-b483-302360d7e6e0",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "e3f3dd1e-b4f8-4a45-be42-dcf1ff6f092c",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "61a92788-0592-41e7-93af-9a59633c4a74",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "68489c40-a780-4875-b436-ebca404f3f22",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "6b615879-85bc-4a1f-922b-f02719902421",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "4467c793-2f36-4415-a3fd-c1245636c1b3",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "fe70a31b-87d7-4370-9360-ce586ffd1047",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "6edaaabd-fe22-4f1e-87f2-2c324a2315de",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "5192912f-a120-455c-9bf9-ac7d8231b696",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "16731f39-b796-4de0-9925-b1dccc9dcbe8",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "c4a161fe-1329-4f56-97eb-48b931cd7643",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "fa595f54-9ed8-445b-aace-847b8975b36d",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "93f6f688-13f6-45e7-8e1d-5265ba28e936",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "ead5e4f9-0326-4540-b7f2-17513acf0e88",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "6bc0c2bc-1af9-4307-9cee-1b0aa628b394",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "7a3b0d29-c51c-4b80-9ba7-46113e94ba9c",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "8c435808-f83e-4170-acdf-0fea4552e8ba",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "18cf09ef-34d0-4452-870b-f8c726482bf9",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "92d45daf-5d1b-4fb1-bf12-cadbbe65dbcb",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "a1fa9e2c-b262-4f4c-808d-401e1dcd9ddc",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "001fbd6c-83af-44c6-84ac-b11e23f9eb94",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "0122a35c-035b-4a85-950c-5acabe42224d",
+        "status": "error",
+        "actual_label": "Minor Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "977e9bb6-1d41-436d-b3f3-4308f3a0cadb",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      },
+      {
+        "uid": "fe71823d-66f5-4b88-879e-80015beed59f",
+        "status": "error",
+        "actual_label": "No Damage",
+        "error": "Invocation of model ID meta.llama3-2-11b-instruct-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model."
+      }
+    ],
+    "google.gemma-3-12b-it": [
+      {
+        "uid": "4f994029-6628-438a-9aba-b5c3241cda6b",
+        "status": "success",
+        "actual_label": "Major Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant portion of the building's roof has collapsed, creating a large debris field where a section of the roof previously existed. This represents a substantial structural failure beyond minor damage."
+      },
+      {
+        "uid": "6ffd4931-2eef-4066-a43d-181c1ee279e3",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95%",
+        "justification": "Image A shows a clearly defined building structure, while Image B depicts a significantly altered landscape with a large area of displaced earth and vegetation, indicating substantial structural failure and likely partial collapse of the building."
+      },
+      {
+        "uid": "8d64bc46-4a78-4d76-8936-5150c7084ca8",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant portion of the building's side has collapsed, with a large debris field extending outwards. The overall shape of the building is drastically altered compared to Image A, indicating substantial structural failure."
+      },
+      {
+        "uid": "f28146ee-4813-4006-81ba-5636c24d14af",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95%",
+        "justification": "Image B shows a significant partial collapse of the building's roof and a large portion of the wall, which is absent in Image A. The overall structure has been severely compromised, indicating major structural damage."
+      },
+      {
+        "uid": "9bc75a7c-eb60-48c3-8b5b-c98dded9e428",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95%",
+        "justification": "Image B shows a complete collapse of the building's structure, with only a rubble pile remaining where the building once stood in Image A. The distinct shape and features of the pre-disaster building are entirely absent, indicating a significant structural failure."
+      },
+      {
+        "uid": "a7c78e7b-bf31-43f8-b324-0b311b23205f",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95%",
+        "justification": "Image B shows a complete absence of the building structure where it existed in Image A. Only the foundation and surrounding landscaping remain, indicating a significant structural failure and substantial loss of the building."
+      },
+      {
+        "uid": "63ef12ea-d780-4814-bb91-ea33cf0d6353",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant portion of the roof is missing compared to Image A, indicating substantial structural failure. The altered roofline and debris suggest a major impact event has caused considerable damage."
+      },
+      {
+        "uid": "d99c8528-f9b1-42f2-b996-1d6d6f4902e1",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Minor Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant amount of debris scattered across the roof, and some shingles appear to be missing compared to Image A. While the overall structure appears intact, the debris indicates some level of damage occurred."
+      },
+      {
+        "uid": "03623244-1d89-426c-9f1e-9d313124ec7b",
+        "status": "success",
+        "actual_label": "Major Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant portion of the roof missing and severely damaged, indicating substantial structural failure compared to the intact roof in Image A. The distortion and debris visible suggest a major impact or collapse event."
+      },
+      {
+        "uid": "44521f03-0b69-4282-a1c3-83eef7afc3e7",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "75",
+        "justification": "Image B shows a significant portion of the building's front wall has collapsed or is severely damaged compared to Image A, indicating substantial structural failure. The altered shape and presence of debris strongly suggest a major impact or collapse event."
+      },
+      {
+        "uid": "21bf79ae-52ec-469c-b0dd-ca96d68235a9",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, while Image B shows only a flattened area where the building previously stood, indicating complete destruction of the building."
+      },
+      {
+        "uid": "b118abe7-b5b1-450c-a7e2-36d471c3b693",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant portion of the building has collapsed or been removed, with a large area of exposed ground where the structure previously stood. The overall shape and footprint of the building are drastically altered compared to Image A, indicating substantial structural damage."
+      },
+      {
+        "uid": "abca6560-e04a-449f-9f9f-848a6556cc0e",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95",
+        "justification": "Image B shows a significant alteration of the building's footprint and a substantial loss of structure compared to Image A, indicating a partial collapse and major structural failure. The area where the building once stood is now largely flattened and disturbed."
+      },
+      {
+        "uid": "f4ce8cda-e80b-42e8-b483-302360d7e6e0",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, while Image B shows a flattened area with no discernible building remains, indicating a complete collapse or near-complete destruction."
+      },
+      {
+        "uid": "e3f3dd1e-b4f8-4a45-be42-dcf1ff6f092c",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, while Image B shows only a flattened area with no discernible building remains, indicating a complete collapse or near-complete destruction."
+      },
+      {
+        "uid": "61a92788-0592-41e7-93af-9a59633c4a74",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, while Image B shows a flattened area with no discernible building remains, indicating a complete collapse or near-complete destruction."
+      },
+      {
+        "uid": "68489c40-a780-4875-b436-ebca404f3f22",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant alteration of the building's structure and surrounding area compared to Image A, with a large portion of the building appearing to have collapsed and substantial debris scattered throughout the area. The original building shape is no longer discernible."
+      },
+      {
+        "uid": "6b615879-85bc-4a1f-922b-f02719902421",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows significant ground disturbance and a partial collapse of the building's structure compared to the intact building in Image A. The altered terrain and missing portions of the building indicate substantial structural failure."
+      },
+      {
+        "uid": "4467c793-2f36-4415-a3fd-c1245636c1b3",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows significant ground disturbance and a substantial loss of the building's structure compared to Image A, indicating a partial collapse and major structural failure. The overall shape of the building is drastically altered, with a large area appearing to be missing."
+      },
+      {
+        "uid": "fe70a31b-87d7-4370-9360-ce586ffd1047",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows significant clearing of vegetation and a substantial portion of the roof is missing compared to Image A, indicating a major structural impact from the disaster event."
+      },
+      {
+        "uid": "6edaaabd-fe22-4f1e-87f2-2c324a2315de",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image B shows a complete absence of the building present in Image A, with only a flattened area remaining. This indicates a total collapse of the structure, classifying it as destroyed."
+      },
+      {
+        "uid": "5192912f-a120-455c-9bf9-ac7d8231b696",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, whereas Image B shows only a flattened area with no discernible building remains, indicating complete destruction."
+      },
+      {
+        "uid": "16731f39-b796-4de0-9925-b1dccc9dcbe8",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95",
+        "justification": "Image B shows a significant collapse of the roof and portions of the walls compared to Image A, indicating substantial structural failure. The debris field and altered building footprint clearly demonstrate a level of damage beyond minor or superficial issues."
+      },
+      {
+        "uid": "c4a161fe-1329-4f56-97eb-48b931cd7643",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95",
+        "justification": "Image B shows significant ground disturbance and a complete absence of the buildings present in Image A, indicating substantial structural failure and likely partial collapse. The landscape has been dramatically altered, suggesting a powerful force removed the structures."
+      },
+      {
+        "uid": "fa595f54-9ed8-445b-aace-847b8975b36d",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95",
+        "justification": "Image B shows significant roof loss and substantial debris scattered across the area where buildings were present in Image A. The structures appear severely compromised, indicating a major structural failure."
+      },
+      {
+        "uid": "93f6f688-13f6-45e7-8e1d-5265ba28e936",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95",
+        "justification": "Image B shows significant ground disturbance and a complete absence of the buildings visible in Image A, indicating substantial structural failure and likely partial collapse. The terrain has been altered, suggesting a powerful force impacted the area."
+      },
+      {
+        "uid": "ead5e4f9-0326-4540-b7f2-17513acf0e88",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows significant ground disturbance and a flattened appearance of the building compared to Image A, indicating substantial structural failure and likely partial collapse. The overall shape of the building is no longer discernible, suggesting a high degree of damage."
+      },
+      {
+        "uid": "6bc0c2bc-1af9-4307-9cee-1b0aa628b394",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "95",
+        "justification": "Image B shows significant roof loss and partial collapse of the building structures compared to Image A, indicating substantial structural failure. The presence of debris and altered building outlines strongly suggests a major damage event."
+      },
+      {
+        "uid": "7a3b0d29-c51c-4b80-9ba7-46113e94ba9c",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant collapse of the roof and portions of the walls compared to Image A, indicating substantial structural failure. The overall shape of the building is drastically altered, suggesting a level of damage beyond minor repairs."
+      },
+      {
+        "uid": "8c435808-f83e-4170-acdf-0fea4552e8ba",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows multiple distinct buildings, while Image B shows only rubble and disturbed ground where those buildings previously stood, indicating complete destruction. The absence of any recognizable structural elements confirms a 'Destroyed' classification."
+      },
+      {
+        "uid": "18cf09ef-34d0-4452-870b-f8c726482bf9",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, whereas Image B shows only a flattened area with no discernible building remains, indicating complete destruction."
+      },
+      {
+        "uid": "92d45daf-5d1b-4fb1-bf12-cadbbe65dbcb",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant portion of the roof and walls have collapsed compared to Image A, indicating substantial structural failure. The overall shape of the building is drastically altered, suggesting a major impact event."
+      },
+      {
+        "uid": "a1fa9e2c-b262-4f4c-808d-401e1dcd9ddc",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant portion of the roof is missing and there is substantial debris scattered around the building, indicating a major structural failure compared to the intact structure in Image A."
+      },
+      {
+        "uid": "001fbd6c-83af-44c6-84ac-b11e23f9eb94",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, whereas Image B shows only a flattened area with no discernible building remains, indicating a complete collapse or near-complete destruction."
+      },
+      {
+        "uid": "0122a35c-035b-4a85-950c-5acabe42224d",
+        "status": "success",
+        "actual_label": "Minor Damage",
+        "predicted_label": "Destroyed",
+        "confidence_score": "95",
+        "justification": "Image A shows a clearly defined building structure, whereas Image B shows a flattened area with no recognizable building features remaining, indicating a complete collapse or near-complete destruction."
+      },
+      {
+        "uid": "977e9bb6-1d41-436d-b3f3-4308f3a0cadb",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Major Damage",
+        "confidence_score": "85%",
+        "justification": "Image B shows a significant shift in the building's position and a substantial portion of the structure is missing compared to Image A, indicating a major structural failure likely due to a landslide or similar event."
+      },
+      {
+        "uid": "fe71823d-66f5-4b88-879e-80015beed59f",
+        "status": "success",
+        "actual_label": "No Damage",
+        "predicted_label": "Minor Damage",
+        "confidence_score": "75",
+        "justification": "Image B shows a significant portion of the roofline has collapsed or is missing compared to Image A. While the core structure appears intact, the substantial roof damage indicates a level of damage beyond superficial issues."
+      }
+    ]
+  }
+}
