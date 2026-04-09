@@ -49,57 +49,10 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Project Structure
-- `/app`: Next.js App Router (pages and API routes).
+- `/app`: Next.js App Router (pages, API routes, and layouts).
 - `/components`: React components (UI and Map logic).
-- `/content`: Local scripts and manifest (no large dataset files - hosted on S3).
-- `/lib`: Utility functions and shared types.
-- `/hooks`: Custom React hooks.
-- `/public`: Static assets.
+- `/content`: Scripts, manifest, and config (dataset is on S3).
+- `/lib`: Utility functions, Amplify config, and shared types.
+- `/hooks`: Custom React hooks (mobile detection, toast notifications).
+- `/styles`: Global CSS styles.
 
-## Data Architecture
-
-The dataset (images and labels) is hosted on **AWS S3 + CloudFront** rather than in the repository. This allows:
-- Fast global content delivery via CDN
-- No large file downloads for team members
-- Easy updates without re-committing data
-
-### For Team Members
-
-To run the application:
-1. Clone the repository
-2. Set `NEXT_PUBLIC_CLOUDFRONT_URL` in your `.env.local` (see above)
-3. Run `npm run dev`
-
-The manifest (`content/manifest.json`) already contains all the CloudFront URLs - no additional setup needed.
-
-### Updating the Dataset
-
-If you need to regenerate the manifest (e.g., to add new patches or change the CloudFront URL):
-
-```bash
-# Set the CloudFront URL as an environment variable
-export NEXT_PUBLIC_CLOUDFRONT_URL=https://your-cloudfront-url.cloudfront.net
-
-# Regenerate the manifest
-python3 content/generate_manifest.py
-```
-
-This requires `content/xview_geotransforms.json` which contains the geographic reference data for the patches.
-
-## Dataset & Content
-
-The application visualizes the **xBD Dataset** (Hurricane Harvey patches). Building damage classifications are shown as colored polygons:
-- 🟢 Green: No Damage
-- 🟡 Yellow: Minor Damage
-- 🔴 Red: Major Damage
-- 🟣 Purple: Destroyed
-
-### Content Directory
-
-The `content/` folder contains:
-- `manifest.json` - Patch bounds and CloudFront URLs for all imagery
-- `generate_manifest.py` - Script to regenerate the manifest
-- `xview_geotransforms.json` - Geographic reference data for bounds calculation
-- Various utility scripts (VLM testing, benchmarking, etc.)
-
-Large dataset files (images/labels) are NOT in the repository - they're hosted on S3/CloudFront.
