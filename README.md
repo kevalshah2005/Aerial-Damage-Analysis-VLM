@@ -6,6 +6,7 @@ A Next.js 16 application featuring an interactive geospatial dashboard with an i
 - **Interactive Map**: Built with Leaflet and React-Leaflet.
 - **AI Chatbot**: Integrated via Vercel AI SDK (OpenAI GPT-4o-mini).
 - **Modern UI**: Styled with Tailwind CSS and shadcn/ui.
+- **Hurricane Harvey Data**: Visualizes pre/post disaster imagery with building damage overlays.
 
 ## Getting Started
 
@@ -22,7 +23,8 @@ npm install --legacy-peer-deps
 ```
 
 ### Environment Setup
-Create a `.env.local` file in the root directory and add your OpenAI and AWS Cognito keys:
+
+Create a `.env.local` file in the root directory and add your OpenAI, AWS Cognito, and CloudFront keys:
 
 ```env
 OPENAI_API_KEY=your_api_key_here
@@ -31,6 +33,9 @@ OPENAI_API_KEY=your_api_key_here
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=your_user_pool_id
 NEXT_PUBLIC_COGNITO_CLIENT_ID=your_client_id
 NEXT_PUBLIC_COGNITO_REGION=your_aws_region
+
+# CloudFront URL for dataset (images and labels served from S3)
+NEXT_PUBLIC_CLOUDFRONT_URL=https://d2nvreie41u08u.cloudfront.net
 ```
 
 ### Running the Project
@@ -46,25 +51,55 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Project Structure
 - `/app`: Next.js App Router (pages and API routes).
 - `/components`: React components (UI and Map logic).
-- `/content`: Local dataset storage (Hurricane Harvey xBD patches).
+- `/content`: Local scripts and manifest (no large dataset files - hosted on S3).
 - `/lib`: Utility functions and shared types.
 - `/hooks`: Custom React hooks.
 - `/public`: Static assets.
 
+## Data Architecture
+
+The dataset (images and labels) is hosted on **AWS S3 + CloudFront** rather than in the repository. This allows:
+- Fast global content delivery via CDN
+- No large file downloads for team members
+- Easy updates without re-committing data
+
+### For Team Members
+
+To run the application:
+1. Clone the repository
+2. Set `NEXT_PUBLIC_CLOUDFRONT_URL` in your `.env.local` (see above)
+3. Run `npm run dev`
+
+The manifest (`content/manifest.json`) already contains all the CloudFront URLs - no additional setup needed.
+
+### Updating the Dataset
+
+If you need to regenerate the manifest (e.g., to add new patches or change the CloudFront URL):
+
+```bash
+# Set the CloudFront URL as an environment variable
+export NEXT_PUBLIC_CLOUDFRONT_URL=https://your-cloudfront-url.cloudfront.net
+
+# Regenerate the manifest
+python3 content/generate_manifest.py
+```
+
+This requires `content/xview_geotransforms.json` which contains the geographic reference data for the patches.
+
 ## Dataset & Content
 
-The application is designed to process and visualize the **xBD Dataset** (specifically Hurricane Harvey patches). The `content/` folder is used as a local repository for these files.
+The application visualizes the **xBD Dataset** (Hurricane Harvey patches). Building damage classifications are shown as colored polygons:
+- 🟢 Green: No Damage
+- 🟡 Yellow: Minor Damage
+- 🔴 Red: Major Damage
+- 🟣 Purple: Destroyed
 
-### Required File Pairs
-For the dashboard to correctly align imagery on the map, you should upload/include pairs of files:
-1.  **Imagery (.png)**: 1024x1024 orthorectified image patches (e.g., `hurricane-harvey_00000037_post_disaster.png`).
-2.  **Metadata/Labels (.json)**: Contains building polygons in both pixel (`xy`) and geographic (`lng_lat`) coordinates.
+### Content Directory
 
-### How it works
-The system automatically pairs `.png` and `.json` files by their filename. It parses the **WKT (Well-Known Text)** building polygons from the JSON to calculate a precise geographic scale and offset, allowing the images to be "draped" accurately over the Leaflet map as `ImageOverlays`.
+The `content/` folder contains:
+- `manifest.json` - Patch bounds and CloudFront URLs for all imagery
+- `generate_manifest.py` - Script to regenerate the manifest
+- `xview_geotransforms.json` - Geographic reference data for bounds calculation
+- Various utility scripts (VLM testing, benchmarking, etc.)
 
-## Scripts In Content Directory
-
-There are two scripts in `content/`, `make-symlinks.sh` and `overlay-labels.py`
-
-`overlay-labels.py` works by taking a required flag called `--root` which takes a directory. From that directory, it will attempt to find two directories `images` and `labels`. In order to maintain the functionality of the script, `make-symlinks.sh` creates the two directories in `images-and-labels/` and makes symlinks of the png files in `images` and json files in `labels` in this way, when you execute the script with `--root images-and-labels`, it can work as intended.
+Large dataset files (images/labels) are NOT in the repository - they're hosted on S3/CloudFront.
