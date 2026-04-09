@@ -9,6 +9,16 @@ pipeline {
 
     stages {
 
+        stage('Install Node.js') {
+            steps {
+                echo 'Installing Node.js...'
+                sh '''
+                    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+                    sudo apt-get install -y nodejs
+                '''
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 echo 'Installing Node dependencies...'
