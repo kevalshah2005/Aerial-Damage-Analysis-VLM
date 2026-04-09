@@ -1,11 +1,15 @@
-export interface ImageryLayer {
+export interface DatasetPatch {
   id: string
-  name: string
-  url?: string
-  type: 'pre' | 'post' | 'buildings'
-  visible: boolean
-  opacity: number
-  highlighted?: boolean
-  bounds?: [[number, number], [number, number]]
-  geometries?: any[]
+  pre: string
+  post: string
+  preJson: string
+  postJson: string
+  bounds: [[number, number], [number, number]]
+  buildingCount: number
+}
+
+export interface DatasetManifest {
+  patches: DatasetPatch[]
+  totalBounds: [[number, number], [number, number]]
+  count: number
 }
