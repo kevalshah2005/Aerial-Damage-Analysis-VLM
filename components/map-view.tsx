@@ -113,6 +113,7 @@ export default function MapView({
   const loadedPreRef = useRef<Set<string>>(new Set())
   const loadedPostRef = useRef<Set<string>>(new Set())
   const loadedBuildingsRef = useRef<Set<string>>(new Set())
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [activeBaseLayer, setActiveBaseLayer] = useState(2)
   const [showLayerPicker, setShowLayerPicker] = useState(false)
@@ -188,7 +189,7 @@ export default function MapView({
 
     for (const patch of visible) {
       if (!loadedPreRef.current.has(patch.id)) {
-        const url = `/api/dataset/image/${patch.pre}`
+        const url = patch.pre
         const overlay = L.imageOverlay(url, patch.bounds, {
           opacity: datasetPreOpacity,
           zIndex: 900,
@@ -231,7 +232,7 @@ export default function MapView({
 
     for (const patch of visible) {
       if (!loadedPostRef.current.has(patch.id)) {
-        const url = `/api/dataset/image/${patch.post}`
+        const url = patch.post
         const overlay = L.imageOverlay(url, patch.bounds, {
           opacity: datasetPostOpacity,
           zIndex: 1000,
@@ -280,7 +281,7 @@ export default function MapView({
           try {
             let data = buildingCacheRef.current[patch.id]
             if (!data) {
-              const res = await fetch(`/api/dataset/label/${patch.preJson}`)
+              const res = await fetch(patch.postJson)
               if (!res.ok) return
               data = await res.json()
               buildingCacheRef.current[patch.id] = data
@@ -291,7 +292,8 @@ export default function MapView({
 
             const geoGroup = L.layerGroup()
             geometries.forEach((geo) => {
-              const subtype = geo.properties?.subtype || "unknown"
+              const subtype = (geo.properties?.subtype || "unknown").trim().toLowerCase()
+              console.log("Building subtype:", subtype, "full props:", geo.properties)
               const color =
                 subtype === "no-damage"
                   ? "#22c55e"
@@ -313,7 +315,7 @@ export default function MapView({
                 pane: "markerPane",
               })
                 .bindPopup(
-                  `Building: ${geo.properties?.uid?.substring(0, 8)}...<br>Damage: ${subtype.replace(/-/g, " ")}`
+                  `Building: ${geo.properties?.uid?.substring(0, 8)}...<br>Damage: ${subtype.replace(/-/g, " ")} (raw: ${geo.properties?.subtype})`
                 )
                 .addTo(geoGroup)
             })
@@ -351,51 +353,44 @@ export default function MapView({
 
     if (datasetPreVisible) {
       const visibleIds = new Set(visible.map((p) => p.id))
-      for (const id of loadedPreRef.current) {
-        if (!visibleIds.has(id) && preOverlaysRef.current[id]) {
-          map.removeLayer(preOverlaysRef.current[id])
-          delete preOverlaysRef.current[id]
-          loadedPreRef.current.delete(id)
-        }
-      }
+      // Only add new overlays, don't remove - just toggle visibility
       for (const patch of visible) {
         if (!loadedPreRef.current.has(patch.id)) {
-          const url = `/api/dataset/image/${patch.pre}`
+          const url = patch.pre
           const overlay = L.imageOverlay(url, patch.bounds, { opacity: datasetPreOpacity, zIndex: 900, alt: patch.pre }).addTo(map)
           preOverlaysRef.current[patch.id] = overlay
           loadedPreRef.current.add(patch.id)
+        }
+      }
+      // Hide off-screen patches instead of removing
+      for (const id of loadedPreRef.current) {
+        if (!visibleIds.has(id) && preOverlaysRef.current[id]) {
+          map.removeLayer(preOverlaysRef.current[id])
         }
       }
     }
 
     if (datasetPostVisible) {
       const visibleIds = new Set(visible.map((p) => p.id))
-      for (const id of loadedPostRef.current) {
-        if (!visibleIds.has(id) && postOverlaysRef.current[id]) {
-          map.removeLayer(postOverlaysRef.current[id])
-          delete postOverlaysRef.current[id]
-          loadedPostRef.current.delete(id)
-        }
-      }
+      // Add new overlays, hide off-screen
       for (const patch of visible) {
         if (!loadedPostRef.current.has(patch.id)) {
-          const url = `/api/dataset/image/${patch.post}`
+          const url = patch.post
           const overlay = L.imageOverlay(url, patch.bounds, { opacity: datasetPostOpacity, zIndex: 1000, alt: patch.post }).addTo(map)
           postOverlaysRef.current[patch.id] = overlay
           loadedPostRef.current.add(patch.id)
+        }
+      }
+      for (const id of loadedPostRef.current) {
+        if (!visibleIds.has(id) && postOverlaysRef.current[id]) {
+          map.removeLayer(postOverlaysRef.current[id])
         }
       }
     }
 
     if (datasetBuildingsVisible) {
       const visibleIds = new Set(visible.map((p) => p.id))
-      for (const id of loadedBuildingsRef.current) {
-        if (!visibleIds.has(id) && buildingOverlaysRef.current[id]) {
-          map.removeLayer(buildingOverlaysRef.current[id])
-          delete buildingOverlaysRef.current[id]
-          loadedBuildingsRef.current.delete(id)
-        }
-      }
+      // Add new buildings, hide off-screen
       for (const patch of visible) {
         if (!loadedBuildingsRef.current.has(patch.id)) {
           loadedBuildingsRef.current.add(patch.id)
@@ -403,7 +398,7 @@ export default function MapView({
             try {
               let data = buildingCacheRef.current[patch.id]
               if (!data) {
-                const res = await fetch(`/api/dataset/label/${patch.preJson}`)
+                const res = await fetch(patch.postJson)
                 if (!res.ok) return
                 data = await res.json()
                 buildingCacheRef.current[patch.id] = data
@@ -412,10 +407,10 @@ export default function MapView({
               if (geometries.length === 0) return
               const geoGroup = L.layerGroup()
               geometries.forEach((geo) => {
-                const subtype = geo.properties?.subtype || "unknown"
+                const subtype = (geo.properties?.subtype || "unknown").trim().toLowerCase()
                 const color = subtype === "no-damage" ? "#22c55e" : subtype === "minor-damage" ? "#f59e0b" : subtype === "major-damage" ? "#ef4444" : subtype === "destroyed" ? "#7c3aed" : "#94a3b8"
                 L.polygon(geo.coordinates, { color, weight: 1.5, fillColor: color, fillOpacity: datasetBuildingsOpacity * 0.5, opacity: datasetBuildingsOpacity, interactive: true, pane: "markerPane" })
-                  .bindPopup(`Building: ${geo.properties?.uid?.substring(0, 8)}...<br>Damage: ${subtype.replace(/-/g, " ")}`)
+                  .bindPopup(`Building: ${geo.properties?.uid?.substring(0, 8)}...<br>Damage: ${subtype.replace(/-/g, " ")} (raw: ${geo.properties?.subtype})`)
                   .addTo(geoGroup)
               })
               geoGroup.addTo(map)
@@ -428,14 +423,27 @@ export default function MapView({
     }
   }, [manifest, datasetPreVisible, datasetPostVisible, datasetBuildingsVisible, datasetPreOpacity, datasetPostOpacity, datasetBuildingsOpacity, getVisiblePatches])
 
+  // Debounced map move handler for better performance
+  const debouncedHandleMapMove = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      handleMapMove()
+    }, 150) // 150ms debounce
+  }, [handleMapMove])
+
   useEffect(() => {
     const map = mapInstanceRef.current
     if (!map) return
-    map.on("moveend", handleMapMove)
+    map.on("moveend", debouncedHandleMapMove)
     return () => {
-      map.off("moveend", handleMapMove)
+      map.off("moveend", debouncedHandleMapMove)
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
     }
-  }, [handleMapMove])
+  }, [debouncedHandleMapMove])
 
   // Fit to total bounds when manifest loads
   useEffect(() => {
