@@ -11,10 +11,17 @@ pipeline {
 
         stage('Install Node.js') {
             steps {
-                echo 'Installing Node.js...'
+                echo 'Installing Node.js via nvm...'
                 sh '''
-                    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-                    sudo apt-get install -y nodejs
+                    export NVM_DIR="$HOME/.nvm"
+                    if [ ! -d "$NVM_DIR" ]; then
+                        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+                    fi
+                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    nvm install 20
+                    nvm use 20
+                    node --version
+                    npm --version
                 '''
             }
         }
@@ -22,35 +29,31 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo 'Installing Node dependencies...'
-                sh 'npm install --legacy-peer-deps'
+                sh '''
+                    export NVM_DIR="$HOME/.nvm"
+                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    nvm use 20
+                    npm install --legacy-peer-deps --include=dev
+                '''
             }
         }
 
         stage('Write Environment File') {
             steps {
-                echo 'Writing .env.local...'
-                withCredentials([
-                    string(credentialsId: 'openai-api-key',        variable: 'OPENAI_KEY'),
-                    string(credentialsId: 'cognito-user-pool-id',   variable: 'COGNITO_POOL_ID'),
-                    string(credentialsId: 'cognito-client-id',      variable: 'COGNITO_CLIENT_ID'),
-                    string(credentialsId: 'cognito-region',         variable: 'COGNITO_REGION')
-                ]) {
-                    sh '''
-                        cat > .env.local <<EOF
-OPENAI_API_KEY=${OPENAI_KEY}
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=${COGNITO_POOL_ID}
-NEXT_PUBLIC_COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
-NEXT_PUBLIC_COGNITO_REGION=${COGNITO_REGION}
-EOF
-                    '''
-                }
+                echo 'Skipping env file - credentials not yet configured.'
+                sh 'touch .env.local'
             }
         }
 
         stage('Build') {
             steps {
                 echo 'Building Next.js application...'
-                sh 'npm run build'
+                sh '''
+                    export NVM_DIR="$HOME/.nvm"
+                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    nvm use 20
+                    npm run build
+                '''
             }
         }
 
@@ -58,6 +61,10 @@ EOF
             steps {
                 echo 'Deploying with pm2...'
                 sh '''
+                    export NVM_DIR="$HOME/.nvm"
+                    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    nvm use 20
+
                     # Install pm2 globally if not already installed
                     npm list -g pm2 || npm install -g pm2
 
