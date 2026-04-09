@@ -40,8 +40,20 @@ pipeline {
 
         stage('Write Environment File') {
             steps {
-                echo 'Skipping env file - credentials not yet configured.'
-                sh 'touch .env.local'
+                echo 'Writing .env.local...'
+                withCredentials([
+                    string(credentialsId: 'cognito-user-pool-id', variable: 'COGNITO_POOL_ID'),
+                    string(credentialsId: 'cognito-client-id',    variable: 'COGNITO_CLIENT_ID'),
+                    string(credentialsId: 'cognito-region',       variable: 'COGNITO_REGION')
+                ]) {
+                    sh '''
+                        cat > .env.local <<EOF
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=${COGNITO_POOL_ID}
+NEXT_PUBLIC_COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+NEXT_PUBLIC_COGNITO_REGION=${COGNITO_REGION}
+EOF
+                    '''
+                }
             }
         }
 
