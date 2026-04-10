@@ -46,13 +46,7 @@ pipeline {
                     string(credentialsId: 'cognito-client-id',    variable: 'COGNITO_CLIENT_ID'),
                     string(credentialsId: 'cognito-region',       variable: 'COGNITO_REGION')
                 ]) {
-                    sh '''
-                        cat > .env.local <<EOF
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=${COGNITO_POOL_ID}
-NEXT_PUBLIC_COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
-NEXT_PUBLIC_COGNITO_REGION=${COGNITO_REGION}
-EOF
-                    '''
+                    sh 'printf "NEXT_PUBLIC_COGNITO_USER_POOL_ID=${COGNITO_POOL_ID}\\nNEXT_PUBLIC_COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}\\nNEXT_PUBLIC_COGNITO_REGION=${COGNITO_REGION}\\n" > .env.local'
                 }
             }
         }
@@ -64,7 +58,7 @@ EOF
                     export NVM_DIR="$HOME/.nvm"
                     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
                     nvm use 20
-                    NEXT_TELEMETRY_DISABLED=1 npx next build --no-lint
+                    NEXT_TELEMETRY_DISABLED=1 npx next build
                 '''
             }
         }
