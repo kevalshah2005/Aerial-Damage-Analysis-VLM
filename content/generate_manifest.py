@@ -3,12 +3,36 @@
 Generates a spatial manifest from xview_geotransforms.json.
 Uses proper georeferencing data from the original geotiffs.
 Outputs content/manifest.json with accurate bounds for each patch pair.
-Includes CloudFront URLs for images and labels when NEXT_PUBLIC_CLOUDFRONT_URL is set.
+Uses local dataset API URLs and reads dataset files from DATASET_LOCAL_ROOT.
 """
 
 import os
 import json
 import re
+
+def load_local_env_file(env_path):
+    """Load simple KEY=VALUE entries from .env.local into process env."""
+    if not os.path.isfile(env_path):
+        return
+
+    with open(env_path, "r", encoding="utf-8") as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+
+            if not key or key in os.environ:
+                continue
+
+            # Remove matching surrounding quotes.
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+
+            os.environ[key] = value
 
 
 def calculate_bounds_from_geotransform(gt, width, height):
@@ -38,20 +62,29 @@ def merge_bounds(a, b):
 
 
 def main():
-    # Get CloudFront URL from environment variable
-    cloudfront_url = os.environ.get('NEXT_PUBLIC_CLOUDFRONT_URL', '')
-    
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    env_path = os.path.join(os.path.dirname(script_dir), ".env.local")
+    load_local_env_file(env_path)
+
+    dataset_local_root = os.environ.get('DATASET_LOCAL_ROOT', '')
+
     geotransforms_path = os.path.join(script_dir, "xview_geotransforms.json")
-    labels_dir = os.path.join(script_dir, "harvey-geo", "labels")
+    if dataset_local_root and not os.path.isabs(dataset_local_root):
+        print("ERROR: DATASET_LOCAL_ROOT must be an absolute path")
+        return
+    labels_dir = os.path.join(dataset_local_root, "labels") if dataset_local_root else ""
     manifest_path = os.path.join(script_dir, "manifest.json")
 
     if not os.path.isfile(geotransforms_path):
         print(f"ERROR: Geotransforms file not found: {geotransforms_path}")
         return
 
+    if not dataset_local_root:
+        print("ERROR: DATASET_LOCAL_ROOT is required for local manifest generation")
+        return
+
     if not os.path.isdir(labels_dir):
-        print(f"ERROR: Labels directory not found: {labels_dir}")
+        print(f"ERROR: Labels directory not found under DATASET_LOCAL_ROOT: {labels_dir}")
         return
 
     with open(geotransforms_path, "r") as f:
@@ -64,35 +97,39 @@ def main():
     for f in sorted(os.listdir(labels_dir)):
         if not f.endswith(".json"):
             continue
-        match = re.match(r'hurricane-harvey_(\d+)_(pre|post)_disaster\.json', f)
+        match = re.match(r'(.+?)_(\d+)_(pre|post)_disaster\.json', f)
         if not match:
             continue
-        patch_id = match.group(1)
-        timing = match.group(2)
-        if patch_id not in patches:
-            patches[patch_id] = {}
-        patches[patch_id][timing] = f
+        disaster = match.group(1)
+        patch_id = match.group(2)
+        timing = match.group(3)
+        patch_key = f"{disaster}_{patch_id}"
+        if patch_key not in patches:
+            patches[patch_key] = {"disaster": disaster, "patchId": patch_id}
+        patches[patch_key][timing] = f
 
     manifest_patches = []
     global_bounds = [180, 90, -180, -90]
 
-    for patch_id in sorted(patches.keys()):
-        entry = patches[patch_id]
+    for patch_key in sorted(patches.keys()):
+        entry = patches[patch_key]
+        disaster = entry.get("disaster")
+        patch_id = entry.get("patchId")
         pre_file = entry.get("pre")
         post_file = entry.get("post")
 
         if not pre_file or not post_file:
-            print(f"  SKIP {patch_id}: missing pre or post file")
+            print(f"  SKIP {patch_key}: missing pre or post file")
             continue
 
-        pre_filename = f"hurricane-harvey_{patch_id}_pre_disaster.png"
-        post_filename = f"hurricane-harvey_{patch_id}_post_disaster.png"
+        pre_filename = f"{disaster}_{patch_id}_pre_disaster.png"
+        post_filename = f"{disaster}_{patch_id}_post_disaster.png"
 
         pre_gt_data = geotransforms.get(pre_filename)
         post_gt_data = geotransforms.get(post_filename)
 
         if not pre_gt_data:
-            print(f"  SKIP {patch_id}: no geotransform for {pre_filename}")
+            print(f"  SKIP {patch_key}: no geotransform for {pre_filename}")
             continue
 
         pre_bounds = calculate_bounds_from_geotransform(pre_gt_data[0], IMAGE_WIDTH, IMAGE_HEIGHT)
@@ -121,23 +158,13 @@ def main():
             [patch_bounds[3], patch_bounds[2]],
         ]
 
-        # Build CloudFront URLs if configured
-        if cloudfront_url:
-            # Remove trailing slash if present
-            cloudfront_url = cloudfront_url.rstrip('/')
-            pre_url = f"{cloudfront_url}/images/{pre_filename}"
-            post_url = f"{cloudfront_url}/images/{post_filename}"
-            pre_json_url = f"{cloudfront_url}/labels/{pre_file}"
-            post_json_url = f"{cloudfront_url}/labels/{post_file}"
-        else:
-            # Fallback to local paths (for development without S3)
-            pre_url = pre_filename
-            post_url = post_filename
-            pre_json_url = pre_file
-            post_json_url = post_file
+        pre_url = f"/api/dataset/image/{pre_filename}"
+        post_url = f"/api/dataset/image/{post_filename}"
+        pre_json_url = f"/api/dataset/label/{pre_file}"
+        post_json_url = f"/api/dataset/label/{post_file}"
 
         manifest_patches.append({
-            "id": patch_id,
+            "id": patch_key,
             "pre": pre_url,
             "post": post_url,
             "preJson": pre_json_url,
@@ -161,10 +188,8 @@ def main():
     print(f"Manifest written: {manifest_path}")
     print(f"  Patches: {len(manifest_patches)}")
     print(f"  Total bounds: {manifest['totalBounds']}")
-    if cloudfront_url:
-        print(f"  CloudFront URL: {cloudfront_url}")
-    else:
-        print(f"  CloudFront URL: Not set (using local paths)")
+    print(f"  Dataset local root: {dataset_local_root}")
+    print("  URL mode: local API routes")
 
 
 if __name__ == "__main__":

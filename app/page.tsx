@@ -36,7 +36,7 @@ export default function Page() {
   const [datasetBuildingsOpacity, setDatasetBuildingsOpacity] = useState(1)
 
   useEffect(() => {
-    fetch("/api/dataset/manifest")
+    fetch("/api/dataset/manifest", { cache: "no-store" })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data) setManifest(data)

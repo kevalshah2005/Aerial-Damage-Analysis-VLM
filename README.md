@@ -24,7 +24,7 @@ npm install --legacy-peer-deps
 
 ### Environment Setup
 
-Create a `.env.local` file in the root directory and add your OpenAI, AWS Cognito, and CloudFront keys:
+Create a `.env.local` file in the root directory and add your OpenAI, AWS Cognito, and local dataset path:
 
 ```env
 OPENAI_API_KEY=your_api_key_here
@@ -34,8 +34,19 @@ NEXT_PUBLIC_COGNITO_USER_POOL_ID=your_user_pool_id
 NEXT_PUBLIC_COGNITO_CLIENT_ID=your_client_id
 NEXT_PUBLIC_COGNITO_REGION=your_aws_region
 
-# CloudFront URL for dataset (images and labels served from S3)
-NEXT_PUBLIC_CLOUDFRONT_URL=https://d2nvreie41u08u.cloudfront.net
+# Local dataset root (absolute path). Required for manifest generation metadata
+# and for local /api/dataset/* file-serving routes.
+# Example (Windows): DATASET_LOCAL_ROOT=D:\\datasets\\harvey-geo
+# Required folders:
+#   <DATASET_LOCAL_ROOT>/images/*.png
+#   <DATASET_LOCAL_ROOT>/labels/*.json
+DATASET_LOCAL_ROOT=your_absolute_dataset_path
+```
+
+After updating dataset settings, regenerate the manifest:
+
+```bash
+python content/generate_manifest.py
 ```
 
 ### Running the Project
@@ -51,7 +62,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Project Structure
 - `/app`: Next.js App Router (pages, API routes, and layouts).
 - `/components`: React components (UI and Map logic).
-- `/content`: Scripts, manifest, and config (dataset is on S3).
+- `/content`: Scripts, manifest, and geospatial config.
 - `/lib`: Utility functions, Amplify config, and shared types.
 - `/hooks`: Custom React hooks (mobile detection, toast notifications).
 - `/styles`: Global CSS styles.

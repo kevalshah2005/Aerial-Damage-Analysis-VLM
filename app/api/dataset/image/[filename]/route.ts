@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import fs from "fs"
 import path from "path"
 
+function resolveDatasetImagesDir() {
+  const root = process.env.DATASET_LOCAL_ROOT
+  if (!root) {
+    throw new Error("DATASET_LOCAL_ROOT is required for local dataset image routes")
+  }
+
+  if (!path.isAbsolute(root)) {
+    throw new Error("DATASET_LOCAL_ROOT must be an absolute path")
+  }
+
+  return path.join(root, "images")
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
@@ -14,9 +27,20 @@ export async function GET(
 
   // Sanitize filename to prevent path traversal
   const safeName = path.basename(filename)
-  const filePath = path.join(process.cwd(), "content", "harvey-geo", "images", safeName)
+  let imagesDir = ""
+  try {
+    imagesDir = resolveDatasetImagesDir()
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 })
+  }
+  const filePath = path.join(imagesDir, safeName)
 
   try {
+    const relative = path.relative(imagesDir, filePath)
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      return NextResponse.json({ error: "Invalid file path" }, { status: 400 })
+    }
+
     const stat = fs.statSync(filePath)
     const fileStream = fs.createReadStream(filePath)
 

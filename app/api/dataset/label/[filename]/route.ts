@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import fs from "fs"
 import path from "path"
 
+function resolveDatasetLabelsDir() {
+  const root = process.env.DATASET_LOCAL_ROOT
+  if (!root) {
+    throw new Error("DATASET_LOCAL_ROOT is required for local dataset label routes")
+  }
+
+  if (!path.isAbsolute(root)) {
+    throw new Error("DATASET_LOCAL_ROOT must be an absolute path")
+  }
+
+  return path.join(root, "labels")
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
@@ -13,9 +26,20 @@ export async function GET(
   }
 
   const safeName = path.basename(filename)
-  const filePath = path.join(process.cwd(), "content", "harvey-geo", "labels", safeName)
+  let labelsDir = ""
+  try {
+    labelsDir = resolveDatasetLabelsDir()
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 })
+  }
+  const filePath = path.join(labelsDir, safeName)
 
   try {
+    const relative = path.relative(labelsDir, filePath)
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      return NextResponse.json({ error: "Invalid file path" }, { status: 400 })
+    }
+
     const data = fs.readFileSync(filePath, "utf-8")
     return NextResponse.json(JSON.parse(data), {
       headers: {

@@ -10,7 +10,9 @@ export async function GET() {
     const manifest = JSON.parse(data)
     return NextResponse.json(manifest, {
       headers: {
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
       },
     })
   } catch {
