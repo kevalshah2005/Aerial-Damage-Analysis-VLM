@@ -12,7 +12,7 @@ A Next.js 16 application featuring an interactive geospatial dashboard with an i
 
 ### Prerequisites
 - Node.js installed on your system.
-- AWS credentials with Bedrock invoke permissions.
+- AWS credentials with Bedrock and DynamoDB permissions.
 
 ### Installation
 
@@ -32,6 +32,8 @@ AWS_REGION=us-east-2
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
 BEDROCK_MODEL_ID=your_inference_profile_id_or_arn
+DDB_CONVERSATIONS_TABLE=chat_conversations
+DDB_MESSAGES_TABLE=chat_messages
 
 # AWS Cognito Configuration
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=your_user_pool_id
@@ -42,11 +44,19 @@ NEXT_PUBLIC_COGNITO_REGION=us-east-2
 NEXT_PUBLIC_CLOUDFRONT_URL=https://d2nvreie41u08u.cloudfront.net
 ```
 
-1. In AWS IAM, select your user and add the BedrockChatInvokePolicy
-2. On that same page, create an access key and place the values as `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
-3. In AWS Bedrock, go to Inference profiles -> Application and place the ARN value as `BEDROCK_MODEL_ID` (should start with arn:)
-4. In AWS Cognito, select the Test User Pool and place the User pool ID as `NEXT_PUBLIC_COGNITO_USER_POOL_ID`
-5. Go to App clients and place the Client ID for the GeospatialDashboard client as `NEXT_PUBLIC_COGNITO_CLIENT_ID`
+### AWS Setup
+
+1. In IAM -> Users -> *your user* -> Security credentials, create an access key (Local code), then copy:
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+2. In Bedrock -> Inference profiles, copy the application inference profile ID or ARN and set it as:
+   - `BEDROCK_MODEL_ID`
+3. In Cognito -> User pools -> Test User Pool, copy:
+   - User pool ID -> `NEXT_PUBLIC_COGNITO_USER_POOL_ID`
+   - App Clients -> Client ID -> `NEXT_PUBLIC_COGNITO_CLIENT_ID`
+4. In DynamoDB -> Tables, copy the ARN from each table and set is as:
+   - chat_conversations -> `DDB_CONVERSATIONS_TABLE`
+   - chat_messages -> `DDB_MESSAGES_TABLE`
 
 ### Running the Project
 
