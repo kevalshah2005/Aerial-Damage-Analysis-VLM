@@ -37,7 +37,7 @@ BEDROCK_MODEL_ID=your_inference_profile_id_or_arn
 # AWS Cognito Configuration
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=your_user_pool_id
 NEXT_PUBLIC_COGNITO_CLIENT_ID=your_client_id
-NEXT_PUBLIC_COGNITO_REGION=your_aws_region
+NEXT_PUBLIC_COGNITO_REGION=us-east-2
 
 # CloudFront URL for dataset (images and labels served from S3)
 NEXT_PUBLIC_CLOUDFRONT_URL=https://d2nvreie41u08u.cloudfront.net
