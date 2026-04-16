@@ -6,11 +6,17 @@ import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import type { UIMessage } from "ai"
 import { useRef, useEffect, useState } from "react"
+import { fetchAuthSession } from "aws-amplify/auth"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import {
   Send,
   Bot,
   User,
   Sparkles,
+  Plus,
+  Pencil,
+  Trash2,
   MapPin,
   Satellite,
   Mountain,
@@ -40,15 +46,83 @@ function getMessageText(message: UIMessage): string {
     .join("")
 }
 
-const transport = new DefaultChatTransport({
-  api: "/api/chat",
-})
+type Conversation = {
+  conversationId: string
+  title: string
+  updatedAt: string
+}
+
+type StoredMessage = {
+  messageId: string
+  role: "user" | "assistant" | "system"
+  content: string
+}
+
+async function getAuthHeader(): Promise<Record<string, string>> {
+  const session = await fetchAuthSession()
+  const token = session.tokens?.idToken?.toString()
+  if (!token) {
+    throw new Error("No auth token available")
+  }
+  return { Authorization: `Bearer ${token}` }
+}
 
 export default function ChatPanel() {
   const [input, setInput] = useState("")
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(
+    null
+  )
+  const [editingTitle, setEditingTitle] = useState("")
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    null
+  )
+  const [loadingConversations, setLoadingConversations] = useState(true)
+  const [loadingMessages, setLoadingMessages] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const { messages, sendMessage, status } = useChat({ transport })
+  const transport = React.useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+      }),
+    []
+  )
+
+  const loadConversations = React.useCallback(async () => {
+    const headers = await getAuthHeader()
+    const res = await fetch("/api/chat/conversations", { headers })
+    if (!res.ok) {
+      throw new Error("Failed to load conversations")
+    }
+    const data = await res.json()
+    setConversations(data.conversations ?? [])
+    return data.conversations ?? []
+  }, [])
+
+  const createConversation = React.useCallback(async () => {
+    const headers = await getAuthHeader()
+    const res = await fetch("/api/chat/conversations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      body: JSON.stringify({}),
+    })
+    if (!res.ok) {
+      throw new Error("Failed to create conversation")
+    }
+    const data = await res.json()
+    return data.conversation as Conversation
+  }, [])
+
+  const { messages, sendMessage, status, setMessages } = useChat({
+    transport,
+    onFinish: async () => {
+      await loadConversations()
+    },
+  })
 
   const isStreaming = status === "streaming"
 
@@ -58,31 +132,253 @@ export default function ChatPanel() {
     }
   }, [messages])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const loaded = await loadConversations()
+        if (cancelled) return
+        if (loaded.length === 0) {
+          const created = await createConversation()
+          if (cancelled) return
+          setConversations([created])
+          setActiveConversationId(created.conversationId)
+        } else {
+          setActiveConversationId(loaded[0].conversationId)
+        }
+      } catch {
+        if (!cancelled) {
+          setConversations([])
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingConversations(false)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [createConversation, loadConversations])
+
+  useEffect(() => {
+    if (!activeConversationId) return
+    let cancelled = false
+    ;(async () => {
+      setLoadingMessages(true)
+      try {
+        const headers = await getAuthHeader()
+        const res = await fetch(`/api/chat/conversations/${activeConversationId}`, {
+          headers,
+        })
+        if (!res.ok) {
+          throw new Error("Failed to fetch conversation")
+        }
+        const data = await res.json()
+        const initialMessages: UIMessage[] = (data.messages as StoredMessage[]).map(
+          (message) => ({
+            id: message.messageId,
+            role: message.role,
+            parts: [{ type: "text", text: message.content }],
+          })
+        )
+        if (!cancelled) {
+          setMessages(initialMessages)
+          await loadConversations()
+        }
+      } catch {
+        if (!cancelled) setMessages([])
+      } finally {
+        if (!cancelled) setLoadingMessages(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeConversationId, setMessages, loadConversations])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isStreaming) return
-    sendMessage({ text: input })
+    if (!input.trim() || isStreaming || !activeConversationId) return
+    const text = input
     setInput("")
+    const headers = await getAuthHeader()
+    await sendMessage(
+      { text },
+      {
+        headers,
+        body: { conversationId: activeConversationId },
+      }
+    )
   }
 
-  const handleSuggestion = (text: string) => {
-    sendMessage({ text })
+  const handleSuggestion = async (text: string) => {
+    if (!activeConversationId || isStreaming) return
+    const headers = await getAuthHeader()
+    await sendMessage(
+      { text },
+      {
+        headers,
+        body: { conversationId: activeConversationId },
+      }
+    )
+  }
+
+  const handleNewChat = async () => {
+    if (isStreaming) return
+    const created = await createConversation()
+    setConversations((prev) => [created, ...prev])
+    setActiveConversationId(created.conversationId)
+    setMessages([])
+  }
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (isStreaming) return
+    const shouldDelete = window.confirm("Delete this chat permanently?")
+    if (!shouldDelete) return
+
+    const headers = await getAuthHeader()
+    const res = await fetch(`/api/chat/conversations/${conversationId}`, {
+      method: "DELETE",
+      headers,
+    })
+    if (!res.ok) {
+      return
+    }
+
+    const remaining = conversations.filter(
+      (conversation) => conversation.conversationId !== conversationId
+    )
+    setConversations(remaining)
+
+    if (remaining.length === 0) {
+      const created = await createConversation()
+      setConversations([created])
+      setActiveConversationId(created.conversationId)
+      setMessages([])
+      return
+    }
+
+    if (activeConversationId === conversationId) {
+      setActiveConversationId(remaining[0].conversationId)
+    }
+  }
+
+  const commitRenameConversation = async (conversationId: string) => {
+    const trimmed = editingTitle.trim()
+    if (!trimmed) {
+      setEditingConversationId(null)
+      setEditingTitle("")
+      return
+    }
+    const headers = await getAuthHeader()
+    const res = await fetch(`/api/chat/conversations/${conversationId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...headers,
+      },
+      body: JSON.stringify({ title: trimmed }),
+    })
+    if (!res.ok) {
+      setEditingConversationId(null)
+      setEditingTitle("")
+      return
+    }
+
+    setConversations((prev) =>
+      prev.map((conversation) =>
+        conversation.conversationId === conversationId
+          ? { ...conversation, title: trimmed }
+          : conversation
+      )
+    )
+    setEditingConversationId(null)
+    setEditingTitle("")
   }
 
   return (
     <div className="flex flex-col h-full bg-card">
       {/* Chat header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-primary/15">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
+      <div className="px-4 py-3 border-b border-border space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-primary/15">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">GeoView AI</h2>
+            <p className="text-[10px] text-muted-foreground">
+              Ask about aerial imagery & geospatial data
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            GeoView AI
-          </h2>
-          <p className="text-[10px] text-muted-foreground">
-            Ask about aerial imagery & geospatial data
-          </p>
+        <Button
+          onClick={handleNewChat}
+          disabled={isStreaming || loadingConversations}
+          className="w-full h-8 text-xs"
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          New chat
+        </Button>
+        <div className="max-h-32 overflow-y-auto space-y-1">
+          {conversations.map((conversation) => (
+            <div
+              key={conversation.conversationId}
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-xs border transition-colors ${
+                activeConversationId === conversation.conversationId
+                  ? "bg-primary/15 border-primary/30 text-foreground"
+                  : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                {editingConversationId === conversation.conversationId ? (
+                  <input
+                    autoFocus
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={() => commitRenameConversation(conversation.conversationId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        void commitRenameConversation(conversation.conversationId)
+                      }
+                      if (e.key === "Escape") {
+                        setEditingConversationId(null)
+                        setEditingTitle("")
+                      }
+                    }}
+                    className="w-full bg-background border border-border rounded px-2 py-1 text-xs text-foreground outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setActiveConversationId(conversation.conversationId)}
+                    className="w-full text-left truncate"
+                  >
+                    {conversation.title || "New Chat"}
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setEditingConversationId(conversation.conversationId)
+                  setEditingTitle(conversation.title || "New Chat")
+                }}
+                aria-label="Rename chat"
+                className="p-1 rounded hover:bg-primary/10 hover:text-foreground transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => handleDeleteConversation(conversation.conversationId)}
+                aria-label="Delete chat"
+                className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -91,7 +387,9 @@ export default function ChatPanel() {
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
       >
-        {messages.length === 0 ? (
+        {loadingConversations || loadingMessages ? (
+          <div className="text-xs text-muted-foreground">Loading chat...</div>
+        ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20">
               <Bot className="h-6 w-6 text-primary" />
@@ -154,7 +452,7 @@ export default function ChatPanel() {
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isStreaming}
+            disabled={!input.trim() || isStreaming || !activeConversationId}
             className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg"
             aria-label="Send message"
           >
@@ -195,7 +493,65 @@ function MessageBubble({ message }: { message: UIMessage }) {
             : "bg-secondary text-foreground rounded-tl-sm"
         }`}
       >
-        <p className="text-xs leading-relaxed whitespace-pre-wrap">{text}</p>
+        {isUser ? (
+          <p className="text-xs leading-relaxed whitespace-pre-wrap">{text}</p>
+        ) : (
+          <div className="text-xs leading-relaxed break-words">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h1 className="text-sm font-semibold mt-2 mb-1 first:mt-0">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-sm font-semibold mt-2 mb-1 first:mt-0">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-xs font-semibold mt-2 mb-1 first:mt-0">
+                    {children}
+                  </h3>
+                ),
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                ul: ({ children }) => (
+                  <ul className="list-disc ml-4 mb-2 last:mb-0">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal ml-4 mb-2 last:mb-0">{children}</ol>
+                ),
+                li: ({ children }) => <li className="mb-1">{children}</li>,
+                strong: ({ children }) => (
+                  <strong className="font-semibold">{children}</strong>
+                ),
+                code: ({ inline, children }) =>
+                  inline ? (
+                    <code className="px-1 py-0.5 rounded bg-muted text-[11px]">
+                      {children}
+                    </code>
+                  ) : (
+                    <code className="block p-2 rounded bg-muted text-[11px] overflow-x-auto">
+                      {children}
+                    </code>
+                  ),
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline"
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {text}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   )
