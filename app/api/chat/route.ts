@@ -1,11 +1,15 @@
 import { streamText, convertToModelMessages } from "ai"
-import { openai } from "@ai-sdk/openai"
+import { bedrock } from "@ai-sdk/amazon-bedrock"
 
 export async function POST(req: Request) {
   const { messages } = await req.json()
+  const modelId = process.env.BEDROCK_MODEL_ID
+  if (!modelId) {
+    throw new Error("Missing BEDROCK_MODEL_ID environment variable")
+  }
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: bedrock(modelId),
     system: `You are GeoView AI, an expert assistant specializing in geospatial data, aerial imagery, satellite remote sensing, and geographic information systems (GIS). 
 
 Your knowledge covers:
