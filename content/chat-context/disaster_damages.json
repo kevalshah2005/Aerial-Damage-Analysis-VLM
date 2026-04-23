@@ -1,0 +1,22 @@
+{
+  "disaster": "joplin-tornado",
+  "updatedAt": "2026-04-23T18:46:30.170103+00:00",
+  "source": "S3 labels from s3://aerial-damage-images/labels",
+  "summary": {
+    "total_buildings_assessed": 15352,
+    "no_damage": 8225,
+    "minor_damage": 2192,
+    "major_damage": 1005,
+    "destroyed": 3274,
+    "un_classified": 656
+  },
+  "metadata": {
+    "patches_counted": 149,
+    "labels_used": "post_disaster",
+    "disaster_prefix_filter": "joplin-tornado"
+  },
+  "notes": [
+    "Counts are aggregated from post-disaster label features.lng_lat[*].properties.subtype.",
+    "If a label file could not be read, it is skipped."
+  ]
+}

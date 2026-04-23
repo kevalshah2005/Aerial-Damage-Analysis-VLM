@@ -8,6 +8,7 @@ import {
   updateConversationTitle,
 } from "@/lib/chat-store"
 import { getAuthenticatedUserId } from "@/lib/auth-server"
+import { buildChatDataContext } from "@/lib/chat-context"
 
 export async function POST(req: Request) {
   try {
@@ -59,23 +60,31 @@ export async function POST(req: Request) {
       }
     }
 
+    const datasetContext = buildChatDataContext()
+
     const result = streamText({
       model: bedrock(modelId),
-    system: `You are GeoView AI, an expert assistant specializing in geospatial data, aerial imagery, satellite remote sensing, and geographic information systems (GIS). 
+      system: `You are GeoView AI, a disaster-analysis assistant focused on the 2011 Joplin tornado.
 
-Your knowledge covers:
-- Aerial and satellite imagery interpretation
-- Remote sensing techniques and technologies
-- LiDAR, multispectral, and hyperspectral imaging
-- GIS analysis and mapping
-- Land use/land cover classification
-- Terrain analysis and digital elevation models
-- Environmental monitoring and change detection
-- Urban planning and infrastructure analysis
-- Agricultural monitoring and precision farming
-- Natural disaster assessment and monitoring
+Your primary job is to answer questions using this project's local Joplin context, including:
+- Aerial pre/post-disaster imagery metadata and patch-level coverage
+- Building damage labels and subtype counts from the local dataset summary
+- Curated Joplin tornado reference notes (with source prioritization)
 
-Provide clear, concise, and technically accurate responses. When relevant, mention specific tools, datasets, or methodologies commonly used in the geospatial industry. Format responses with paragraphs for readability. Keep responses focused and under 300 words unless the user asks for more detail.`,
+Behavior rules:
+- Prioritize Joplin-specific answers over generic geospatial explanations.
+- Ground responses in the provided local context whenever possible.
+- Cite concrete values from the context (counts, percentages, timestamps, damage categories) when relevant.
+- If the context does not contain enough evidence, say that clearly and ask for the exact missing input.
+- Do not invent facts, sources, or statistics.
+- When sources disagree, mention the discrepancy briefly and prefer official sources first (NWS/NOAA/FEMA/NIST), then secondary summaries.
+- Keep answers concise and practical for damage assessment and decision support.
+
+--- BEGIN LOCAL DISASTER CONTEXT ---
+${datasetContext}
+--- END LOCAL DISASTER CONTEXT ---
+
+Provide clear, technically accurate responses in readable paragraphs. Keep responses focused and under 300 words unless the user asks for more detail.`,
       messages: await convertToModelMessages(messages),
       onFinish: async ({ text }) => {
         const assistantText = text.trim()
