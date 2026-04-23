@@ -42,6 +42,14 @@ NEXT_PUBLIC_COGNITO_REGION=us-east-2
 
 # AWS CloudFront Configuration
 NEXT_PUBLIC_CLOUDFRONT_URL=https://d2nvreie41u08u.cloudfront.net
+
+# Optional Dataset Manifest Generation (S3-backed)
+S3_BUCKET=your_dataset_bucket_name
+S3_LABELS_PREFIX=labels
+S3_IMAGES_PREFIX=images
+DATASET_DISASTER_PREFIX=joplin-tornado
+DATASET_IMAGE_EXTENSION=webp
+GEOTRANSFORM_IMAGE_EXTENSION=png
 ```
 
 ### AWS Setup
@@ -67,6 +75,28 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+### Regenerate Dataset Manifest
+
+The manifest generator reads label JSON files from S3 and writes `content/manifest.json`.
+
+```bash
+python content/generate_manifest.py
+```
+
+### Chatbot Disaster Context
+
+The chat API injects local disaster context into the model system prompt from:
+
+- `content/manifest.json` (auto-generated summary)
+- `content/chat-context/disaster_damages.json` (structured damage stats)
+- `content/chat-context/reference_notes.md` (curated website notes and facts)
+
+To regenerate structured damage stats from S3 labels:
+
+```bash
+python content/generate_disaster_damages.py
+```
 
 ## Project Structure
 - `/app`: Next.js App Router (pages, API routes, and layouts).
