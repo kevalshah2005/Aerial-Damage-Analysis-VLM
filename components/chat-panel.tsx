@@ -26,15 +26,15 @@ import { Button } from "@/components/ui/button"
 const SUGGESTED_QUESTIONS = [
   {
     icon: <MapPin className="h-3.5 w-3.5" />,
-    text: "What can I learn from aerial imagery of urban areas?",
+    text: "What do the Joplin pre/post aerial images suggest about the hardest-hit areas?",
   },
   {
     icon: <Satellite className="h-3.5 w-3.5" />,
-    text: "How is satellite imagery used in agriculture?",
+    text: "Summarize the Joplin damage subtype counts and what they imply for response priorities.",
   },
   {
     icon: <Mountain className="h-3.5 w-3.5" />,
-    text: "Explain how LiDAR differs from aerial photography",
+    text: "Based on the Joplin references, what are the key verified facts and where do sources differ?",
   },
 ]
 
@@ -80,6 +80,10 @@ export default function ChatPanel() {
   const [loadingConversations, setLoadingConversations] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollToBottom = React.useCallback(() => {
+    if (!scrollRef.current) return
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [])
 
   const transport = React.useMemo(
     () =>
@@ -127,10 +131,8 @@ export default function ChatPanel() {
   const isStreaming = status === "streaming"
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [messages])
+    scrollToBottom()
+  }, [messages, scrollToBottom])
 
   useEffect(() => {
     let cancelled = false
@@ -185,6 +187,8 @@ export default function ChatPanel() {
         )
         if (!cancelled) {
           setMessages(initialMessages)
+          // Ensure older chats open at the latest message, not top.
+          requestAnimationFrame(() => requestAnimationFrame(scrollToBottom))
           await loadConversations()
         }
       } catch {
@@ -198,6 +202,11 @@ export default function ChatPanel() {
       cancelled = true
     }
   }, [activeConversationId, setMessages, loadConversations])
+
+  useEffect(() => {
+    if (loadingMessages) return
+    requestAnimationFrame(() => requestAnimationFrame(scrollToBottom))
+  }, [activeConversationId, loadingMessages, scrollToBottom])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
