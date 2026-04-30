@@ -23,6 +23,8 @@ const MapView = dynamic(() => import("@/components/map-view"), {
   )
 })
 
+const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
+
 export default function Page() {
   const { authStatus } = useAuthenticator(context => [context.authStatus])
   const router = useRouter()
@@ -46,10 +48,10 @@ export default function Page() {
   }, [])
 
   useEffect(() => {
-    if (authStatus === 'unauthenticated') router.push('/auth')
+    if (!skipAuth && authStatus === 'unauthenticated') router.push('/auth')
   }, [authStatus, router])
 
-  if (authStatus === 'configuring' || authStatus === 'unauthenticated') {
+  if (!skipAuth && (authStatus === 'configuring' || authStatus === 'unauthenticated')) {
     return <div className="flex h-screen items-center justify-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
   }
 
