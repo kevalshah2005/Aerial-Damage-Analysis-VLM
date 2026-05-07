@@ -1,6 +1,6 @@
 {
   "disaster": "joplin-tornado",
-  "updatedAt": "2026-04-23T18:46:30.170103+00:00",
+  "updatedAt": "2026-04-30T19:53:45.634074+00:00",
   "source": "S3 labels from s3://aerial-damage-images/labels",
   "summary": {
     "total_buildings_assessed": 15352,
