@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Globe, PanelRightClose, PanelRightOpen, LogOut, BarChart2, Map } from "lucide-react"
+import { Globe, PanelRightClose, PanelRightOpen, LogOut, BarChart2, Map, Satellite } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuthenticator } from "@aws-amplify/ui-react"
 
@@ -52,6 +52,17 @@ export default function DashboardHeader({ chatOpen, onToggleChat }: DashboardHea
           >
             <BarChart2 className="h-3.5 w-3.5" />
             Statistics
+          </Link>
+          <Link
+            href="/vlm"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              pathname === '/vlm'
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            }`}
+          >
+            <Satellite className="h-3.5 w-3.5" />
+            VLM Chat
           </Link>
         </nav>
       </div>
