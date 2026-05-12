@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+
+const genId = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
 import { useRouter } from 'next/navigation'
 import { useAuthenticator } from '@aws-amplify/ui-react'
 import {
@@ -89,7 +91,7 @@ export default function VLMPage() {
   const addImages = (files: FileList | File[]) => {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
     const newImages: AttachedImage[] = imageFiles.map(file => ({
-      id: crypto.randomUUID(),
+      id: genId(),
       file,
       previewUrl: URL.createObjectURL(file),
       name: file.name,
@@ -123,7 +125,7 @@ export default function VLMPage() {
 
     const imagesToSend = [...attachedImages]
     const userMsg: Message = {
-      id: crypto.randomUUID(),
+      id: genId(),
       role: 'user',
       text,
       images: imagesToSend.length > 0 ? imagesToSend : undefined,
@@ -151,12 +153,12 @@ export default function VLMPage() {
 
       setMessages(prev => [
         ...prev,
-        { id: crypto.randomUUID(), role: 'assistant', text: responseText },
+        { id: genId(), role: 'assistant', text: responseText },
       ])
     } catch {
       setMessages(prev => [
         ...prev,
-        { id: crypto.randomUUID(), role: 'assistant', text: 'Failed to reach the VLM. Check your connection and try again.' },
+        { id: genId(), role: 'assistant', text: 'Failed to reach the VLM. Check your connection and try again.' },
       ])
     } finally {
       setIsLoading(false)
