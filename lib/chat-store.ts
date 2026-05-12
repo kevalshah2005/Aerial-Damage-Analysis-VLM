@@ -31,6 +31,7 @@ export type Conversation = {
   updatedAt: string
   lastMessagePreview: string
   messageCount: number
+  source?: string
 }
 
 export type ChatMessage = {
@@ -45,7 +46,8 @@ export type ChatMessage = {
 
 export async function createConversation(
   userId: string,
-  title = "New Chat"
+  title = "New Chat",
+  source?: string
 ): Promise<Conversation> {
   const { conversationsTable } = getTableNames()
   const ddb = getDdbClient()
@@ -58,6 +60,7 @@ export async function createConversation(
     updatedAt: now,
     lastMessagePreview: "",
     messageCount: 0,
+    ...(source ? { source } : {}),
   }
 
   await ddb.send(
@@ -70,7 +73,7 @@ export async function createConversation(
   return conversation
 }
 
-export async function listConversations(userId: string): Promise<Conversation[]> {
+export async function listConversations(userId: string, source?: string): Promise<Conversation[]> {
   const { conversationsTable } = getTableNames()
   const ddb = getDdbClient()
   const result = await ddb.send(
@@ -80,7 +83,9 @@ export async function listConversations(userId: string): Promise<Conversation[]>
       KeyConditionExpression: "userId = :userId",
       ExpressionAttributeValues: {
         ":userId": userId,
+        ...(source ? { ":source": source } : {}),
       },
+      FilterExpression: source ? "source = :source" : "attribute_not_exists(source)",
       ScanIndexForward: false,
     })
   )
