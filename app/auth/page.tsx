@@ -5,12 +5,14 @@ import '@aws-amplify/ui-react/styles.css';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
+
 export default function AuthPage() {
   const { authStatus } = useAuthenticator(context => [context.authStatus]);
   const router = useRouter();
 
   useEffect(() => {
-    if (authStatus === 'authenticated') {
+    if (skipAuth || authStatus === 'authenticated') {
       router.push('/');
     }
   }, [authStatus, router]);
