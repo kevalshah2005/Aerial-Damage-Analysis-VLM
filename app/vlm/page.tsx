@@ -56,6 +56,7 @@ export default function VLMPage() {
   const [input, setInput] = useState('')
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -88,41 +89,69 @@ export default function VLMPage() {
     })
   }
 
-  const handleSend = () => {
+  const fileToBase64 = (file: File): Promise<{ base64: string; mediaType: string }> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        const base64 = dataUrl.split(',')[1]
+        resolve({ base64, mediaType: file.type || 'image/jpeg' })
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+  const handleSend = async () => {
     const text = input.trim()
     if (!text && attachedImages.length === 0) return
 
+    const imagesToSend = [...attachedImages]
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       text,
-      images: attachedImages.length > 0 ? [...attachedImages] : undefined,
+      images: imagesToSend.length > 0 ? imagesToSend : undefined,
     }
 
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setAttachedImages([])
+    setIsLoading(true)
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
-    // Placeholder — VLM response will go here
-    setTimeout(() => {
+    try {
+      const images = await Promise.all(imagesToSend.map(img => fileToBase64(img.file)))
+
+      const res = await fetch('/api/vlm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, images }),
+      })
+
+      const data = await res.json()
+      const responseText = res.ok
+        ? (data.text ?? 'No response from model.')
+        : `Error: ${data.error ?? 'Request failed'}`
+
       setMessages(prev => [
         ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: 'VLM analysis coming soon. This interface will connect to your AWS-hosted vision model to analyze uploaded imagery.',
-        },
+        { id: crypto.randomUUID(), role: 'assistant', text: responseText },
       ])
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'assistant', text: 'Failed to reach the VLM. Check your connection and try again.' },
+      ])
+    } finally {
+      setIsLoading(false)
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, 800)
-
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      void handleSend()
     }
   }
 
@@ -258,6 +287,18 @@ export default function VLMPage() {
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex gap-3">
+                  <div className="shrink-0 flex items-center justify-center h-7 w-7 rounded-lg border bg-secondary border-border text-muted-foreground">
+                    <Bot className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="px-3.5 py-2.5 rounded-xl bg-card border border-border flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -329,8 +370,8 @@ export default function VLMPage() {
               <Button
                 size="icon"
                 className="h-9 w-9 shrink-0 mb-0.5 bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-40"
-                onClick={handleSend}
-                disabled={!input.trim() && attachedImages.length === 0}
+                onClick={() => void handleSend()}
+                disabled={isLoading || (!input.trim() && attachedImages.length === 0)}
               >
                 <Send className="h-4 w-4" />
               </Button>
