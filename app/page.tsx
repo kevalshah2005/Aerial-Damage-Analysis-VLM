@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuthenticator } from "@aws-amplify/ui-react"
 import { Map as MapIcon } from "lucide-react"
 import dynamic from "next/dynamic"
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
 
 import DashboardHeader from "@/components/dashboard-header"
 import ChatPanel from "@/components/chat-panel"
@@ -21,6 +22,8 @@ const MapView = dynamic(() => import("@/components/map-view"), {
     </div>
   )
 })
+
+const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
 
 export default function Page() {
   const { authStatus } = useAuthenticator(context => [context.authStatus])
@@ -45,10 +48,10 @@ export default function Page() {
   }, [])
 
   useEffect(() => {
-    if (authStatus === 'unauthenticated') router.push('/auth')
+    if (!skipAuth && authStatus === 'unauthenticated') router.push('/auth')
   }, [authStatus, router])
 
-  if (authStatus === 'configuring' || authStatus === 'unauthenticated') {
+  if (!skipAuth && (authStatus === 'configuring' || authStatus === 'unauthenticated')) {
     return <div className="flex h-screen items-center justify-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
   }
 
@@ -57,25 +60,53 @@ export default function Page() {
       <DashboardHeader chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        <div className="flex-1 min-w-0 h-full relative">
-          <MapView
-            manifest={manifest}
-            datasetPreVisible={datasetPreVisible}
-            datasetPostVisible={datasetPostVisible}
-            datasetBuildingsVisible={datasetBuildingsVisible}
-            datasetPreOpacity={datasetPreOpacity}
-            datasetPostOpacity={datasetPostOpacity}
-            datasetBuildingsOpacity={datasetBuildingsOpacity}
-            onToggleDatasetPre={() => setDatasetPreVisible(v => !v)}
-            onToggleDatasetPost={() => setDatasetPostVisible(v => !v)}
-            onToggleDatasetBuildings={() => setDatasetBuildingsVisible(v => !v)}
-            onSetDatasetPreOpacity={setDatasetPreOpacity}
-            onSetDatasetPostOpacity={setDatasetPostOpacity}
-            onSetDatasetBuildingsOpacity={setDatasetBuildingsOpacity}
-          />
-        </div>
-
-        {chatOpen && <div className="w-[400px] border-l border-border shrink-0 hidden md:block bg-card/50 backdrop-blur-md relative z-10 shadow-2xl"><ChatPanel /></div>}
+        {chatOpen ? (
+          <PanelGroup direction="horizontal" className="w-full h-full">
+            <Panel defaultSize={72} minSize={45}>
+              <div className="h-full min-w-0 relative">
+                <MapView
+                  manifest={manifest}
+                  datasetPreVisible={datasetPreVisible}
+                  datasetPostVisible={datasetPostVisible}
+                  datasetBuildingsVisible={datasetBuildingsVisible}
+                  datasetPreOpacity={datasetPreOpacity}
+                  datasetPostOpacity={datasetPostOpacity}
+                  datasetBuildingsOpacity={datasetBuildingsOpacity}
+                  onToggleDatasetPre={() => setDatasetPreVisible(v => !v)}
+                  onToggleDatasetPost={() => setDatasetPostVisible(v => !v)}
+                  onToggleDatasetBuildings={() => setDatasetBuildingsVisible(v => !v)}
+                  onSetDatasetPreOpacity={setDatasetPreOpacity}
+                  onSetDatasetPostOpacity={setDatasetPostOpacity}
+                  onSetDatasetBuildingsOpacity={setDatasetBuildingsOpacity}
+                />
+              </div>
+            </Panel>
+            <PanelResizeHandle className="w-1 bg-border/60 hover:bg-primary/60 transition-colors relative group" />
+            <Panel defaultSize={28} minSize={20} maxSize={45}>
+              <div className="h-full border-l border-border bg-card/50 backdrop-blur-md relative z-10 shadow-2xl hidden md:block">
+                <ChatPanel />
+              </div>
+            </Panel>
+          </PanelGroup>
+        ) : (
+          <div className="flex-1 min-w-0 h-full relative">
+            <MapView
+              manifest={manifest}
+              datasetPreVisible={datasetPreVisible}
+              datasetPostVisible={datasetPostVisible}
+              datasetBuildingsVisible={datasetBuildingsVisible}
+              datasetPreOpacity={datasetPreOpacity}
+              datasetPostOpacity={datasetPostOpacity}
+              datasetBuildingsOpacity={datasetBuildingsOpacity}
+              onToggleDatasetPre={() => setDatasetPreVisible(v => !v)}
+              onToggleDatasetPost={() => setDatasetPostVisible(v => !v)}
+              onToggleDatasetBuildings={() => setDatasetBuildingsVisible(v => !v)}
+              onSetDatasetPreOpacity={setDatasetPreOpacity}
+              onSetDatasetPostOpacity={setDatasetPostOpacity}
+              onSetDatasetBuildingsOpacity={setDatasetBuildingsOpacity}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

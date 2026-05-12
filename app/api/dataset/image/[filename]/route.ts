@@ -8,8 +8,10 @@ export async function GET(
 ) {
   const { filename } = await params
 
-  if (!filename.endsWith(".png")) {
-    return NextResponse.json({ error: "Only PNG files allowed" }, { status: 400 })
+  const isPng = filename.endsWith(".png")
+  const isWebp = filename.endsWith(".webp")
+  if (!isPng && !isWebp) {
+    return NextResponse.json({ error: "Only PNG and WebP files allowed" }, { status: 400 })
   }
 
   // Sanitize filename to prevent path traversal
@@ -22,7 +24,7 @@ export async function GET(
 
     return new NextResponse(fileStream as any, {
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": isWebp ? "image/webp" : "image/png",
         "Content-Length": stat.size.toString(),
         "Cache-Control": "public, max-age=86400, immutable",
       },
