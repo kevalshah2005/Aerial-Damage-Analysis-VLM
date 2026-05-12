@@ -62,6 +62,22 @@ export default function VLMPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    addImages(e.dataTransfer.files)
+  }, [])
+
   if (!skipAuth && (authStatus === 'configuring' || authStatus === 'unauthenticated')) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -154,22 +170,6 @@ export default function VLMPage() {
       void handleSend()
     }
   }
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    addImages(e.dataTransfer.files)
-  }, [])
 
   const handleSuggest = (text: string) => {
     setInput(text)
