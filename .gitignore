@@ -6,3 +6,14 @@ node_modules/
 .worktree
 tsconfig.tsbuildinfo
 
+content/full_joplin_cropped_buildings/*
+content/cropped_buildings/*
+content/joplin_cropped_buildings/*
+content/joplin-images-and-labels/*
+content/balanced_cropped_buildings/*
+content/balanced-images-and-labels/*
+content/full-joplin-images-and-labels/*
+content/images-and-labels/*
+content/more_cropped_buildings/*
+content/more-images-and-labels/*
+content/balanced-images-and-labels/*
