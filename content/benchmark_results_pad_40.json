@@ -2,40 +2,40 @@
   "metrics": {
     "qwen.qwen3-vl-235b-a22b": {
       "No Damage": {
-        "precision": 0.8125,
+        "precision": 0.7222222222222222,
         "recall": 0.7647058823529411,
-        "f1-score": 0.7878787878787878,
+        "f1-score": 0.7428571428571429,
         "support": 17.0
       },
       "Minor Damage": {
-        "precision": 0.8,
-        "recall": 0.4444444444444444,
-        "f1-score": 0.5714285714285714,
+        "precision": 0.8181818181818182,
+        "recall": 0.5,
+        "f1-score": 0.6206896551724138,
         "support": 18.0
       },
       "Major Damage": {
-        "precision": 0.42105263157894735,
+        "precision": 0.5333333333333333,
         "recall": 0.5,
-        "f1-score": 0.45714285714285713,
+        "f1-score": 0.5161290322580645,
         "support": 16.0
       },
       "Destroyed": {
-        "precision": 0.5925925925925926,
+        "precision": 0.5714285714285714,
         "recall": 0.7619047619047619,
-        "f1-score": 0.6666666666666666,
+        "f1-score": 0.6530612244897959,
         "support": 21.0
       },
-      "accuracy": 0.625,
+      "accuracy": 0.6388888888888888,
       "macro avg": {
-        "precision": 0.656536306042885,
-        "recall": 0.6177637721755369,
-        "f1-score": 0.6207792207792208,
+        "precision": 0.6612914862914863,
+        "recall": 0.6316526610644257,
+        "f1-score": 0.6331842636943542,
         "support": 72.0
       },
       "weighted avg": {
-        "precision": 0.6582470354126055,
-        "recall": 0.625,
-        "f1-score": 0.6249158249158248,
+        "precision": 0.6602553310886644,
+        "recall": 0.6388888888888888,
+        "f1-score": 0.6357407701679114,
         "support": 72.0
       }
     }
@@ -56,7 +56,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The rectangle in Image B appears smooth and solid, matching the footprint in Image A. There are no visible tarps, breaks, or missing sections. Slight blur and color variation are present but forgiven under the rules.",
+        "visual_analysis": "The rectangle in Image B appears smooth and solid, with no visible dark breaks, missing sections, tarps, or rubble. The slight blur and color shift are within acceptable noise limits per the rules.",
         "damage_label": "No Damage",
         "confidence_score": 95
       },
@@ -64,17 +64,17 @@
         "uid": "d7c002e2-6c66-4f2a-bce5-02de295e1fa8",
         "status": "success",
         "actual_label": "Major Damage",
-        "predicted_label": "Major Damage",
-        "visual_analysis": "The rectangle in Image B appears broken; there is a visible dark break or missing section in the lower portion of the structure compared to Image A, indicating a loss of structural mass.",
-        "damage_label": "Major Damage",
-        "confidence_score": 85
+        "predicted_label": "No Damage",
+        "visual_analysis": "The rectangle in Image B appears smooth and solid, with no visible tarps, breaks, or missing sections. The slight blur and color variation are within acceptable sensor noise limits per the rules.",
+        "damage_label": "No Damage",
+        "confidence_score": 95
       },
       {
         "uid": "867f707d-1c27-4388-aced-2ffc088d335a",
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The rectangle in Image B is not smooth; there is a visible dark vertical break or gap in the center of the white mass, indicating a structural failure or missing section. The edges are also more irregular compared to Image A.",
+        "visual_analysis": "The rectangle in Image B is not smooth; there is a visible dark vertical break or missing section in the center of the structure, indicating a significant loss of mass compared to Image A.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -92,7 +92,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building in Image B shows a visible dark break and missing section in its structural mass compared to Image A, indicating a significant structural failure.",
+        "visual_analysis": "The building in Image B shows a visible dark break and missing section in its mass compared to Image A, indicating a large portion has caved in or collapsed.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -101,7 +101,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The rectangle in Image B appears slightly more blurred and noisy compared to Image A, but it retains a solid, continuous shape of similar size and position. There is no visible dark break, missing section, tarp, or rubble. The differences are consistent with sensor noise or minor atmospheric distortion, not structural failure.",
+        "visual_analysis": "The rectangle in Image B appears slightly blurred and less defined than in Image A, but it retains a solid, continuous shape of similar size and orientation. There is no visible dark break, missing section, tarp, or rubble. The differences are consistent with sensor noise or minor image degradation, not structural failure.",
         "damage_label": "No Damage",
         "confidence_score": 95
       },
@@ -119,7 +119,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint from Image A is completely gone in Image B. What remains is a chaotic, indistinct smudge of rubble and debris with no discernible structural mass or roof. This indicates total loss.",
+        "visual_analysis": "The building footprint from Image A is completely gone in Image B. What remains is a chaotic, indistinct smudge of rubble and debris with no discernible structural form or solid rectangle. This indicates total loss of the structure.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -128,16 +128,16 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building in Image B is not a solid rectangle; it appears as a chaotic smudge of rubble with no discernible structural mass remaining. The footprint from Image A is gone, replaced by a disorganized, lighter-colored area consistent with total collapse.",
+        "visual_analysis": "The building in Image B is not clearly visible as a solid rectangle; it appears as a chaotic smudge of rubble or debris with no discernible structural mass remaining. The footprint from Image A is no longer present as a coherent structure.",
         "damage_label": "Destroyed",
-        "confidence_score": 95
+        "confidence_score": 85
       },
       {
         "uid": "7e32150f-a6d1-4a0d-99ad-1df5ffb4a9e1",
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Minor Damage",
-        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. However, the roof surface is distinctly blue, which is a clear indicator of a tarp covering the structure. This is not sensor noise or a color shift, but a high-contrast, artificial covering consistent with post-disaster repair.",
+        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. However, the roof surface is distinctly blue, which is a clear indicator of a tarp covering the structure, suggesting repair or temporary stabilization after damage.",
         "damage_label": "Minor Damage",
         "confidence_score": 95
       },
@@ -146,7 +146,7 @@
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. While the image is low-resolution and blurry, there is no visible dark break, missing section, or high-contrast tarping. The structure appears intact despite possible sensor noise or color shift.",
+        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. While the image is low-resolution and slightly blurry, there is no visible dark break, missing section, or high-contrast tarping. The structure appears intact despite minor sensor noise and color variation.",
         "damage_label": "No Damage",
         "confidence_score": 85
       },
@@ -155,7 +155,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building in Image B is not a solid rectangle; it appears as a chaotic smudge of rubble with no discernible roof or walls. The structural mass is gone, replaced by a scattered, irregular shape consistent with total collapse.",
+        "visual_analysis": "The building in Image B is not a smooth, solid rectangle. It appears as a chaotic smudge of rubble with no discernible roof structure or intact walls. The footprint is fragmented and irregular, indicating total structural collapse.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -182,7 +182,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B appears as a solid rectangle of similar size to Image A. While the roof color has shifted (possibly from brown to gray) and there is some blur, the overall mass is intact with no visible dark breaks, missing sections, or tarps. This aligns with the 'No Damage' criteria, forgiving sensor noise and color shifts.",
+        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. The roof appears smooth and intact, with no visible blue tarps, white patches, or dark breaks indicating structural failure. Any color or blur differences are within the acceptable range of sensor noise.",
         "damage_label": "No Damage",
         "confidence_score": 95
       },
@@ -191,7 +191,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B is a solid, light-colored rectangle of similar size and shape to Image A. While the color has shifted from gray to white and the image is blurrier, the mass is intact with no visible dark breaks, missing sections, or tarps. This fits the 'No Damage' criteria per the rules.",
+        "visual_analysis": "The building in Image B is a solid, light-colored rectangle of similar size and shape to Image A. While the color has shifted from gray to white and the image is blurry, the mass is intact with no visible dark breaks, missing sections, or tarps. This meets the 'Mass Anchor' and 'Forgive Sensor Noise' rules.",
         "damage_label": "No Damage",
         "confidence_score": 95
       },
@@ -200,7 +200,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building in Image B is a chaotic smudge of rubble and debris, with no discernible solid rectangular mass remaining. The structure has completely collapsed, leaving behind a jumbled, light-gray and brown mess consistent with total destruction.",
+        "visual_analysis": "The building in Image B is a chaotic smudge of rubble with no discernible solid rectangular mass remaining. The structure has completely collapsed, leaving behind a jumbled, light-gray and brown debris field.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -209,7 +209,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is a chaotic smudge of rubble and debris, with no discernible solid structure or roof remaining. The mass is fragmented and lacks the defined rectangular shape seen in Image A, indicating total structural loss.",
+        "visual_analysis": "The building footprint in Image B is a chaotic smudge of rubble and debris, with no discernible solid structure or roof remaining. The mass is fragmented and lacks the coherent rectangular shape seen in Image A.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -226,17 +226,17 @@
         "uid": "eddab1ed-0bcf-41b9-b0ee-a29ae6a05673",
         "status": "success",
         "actual_label": "No Damage",
-        "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is fragmented and irregular compared to the solid rectangle in Image A. There are visible dark breaks and missing sections of the structure's mass, indicating a significant collapse or failure.",
-        "damage_label": "Major Damage",
-        "confidence_score": 85
+        "predicted_label": "Destroyed",
+        "visual_analysis": "The building footprint in Image B is largely gone, replaced by a chaotic smudge of rubble and debris with no discernible structural mass remaining. There is no solid rectangle matching Image A, and the area appears as a flat, disturbed patch of ground with scattered fragments.",
+        "damage_label": "Destroyed",
+        "confidence_score": 95
       },
       {
         "uid": "24f89aa6-d9dd-4ec9-9b21-74d13ef70476",
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building in Image B is visibly broken and fragmented compared to the solid rectangle in Image A. There is a clear 'dark break' and missing sections of the structure's footprint, indicating massive structural failure.",
+        "visual_analysis": "The building in Image B is visibly broken and fragmented. A large portion of the structure's mass is missing or caved-in, with dark breaks and irregular edges compared to the solid rectangle in Image A. This meets the 'Major Damage' trigger.",
         "damage_label": "Major Damage",
         "confidence_score": 95
       },
@@ -245,7 +245,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building in Image B is standing but shows a large, irregular dark area and debris around the structure, indicating a significant portion of the roof or walls has collapsed or is missing. This matches the 'Major Damage' trigger of a visible 'dark break' or missing section of the footprint.",
+        "visual_analysis": "The building in Image B is standing but shows a large, irregular dark area and debris around the structure, indicating a significant portion of the building mass is missing or caved-in. The footprint is broken and not smooth.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -254,7 +254,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The structure in Image B is highly blurred and lacks clear definition. While a faint, light-colored mass is present in a similar location to Image A, it is not possible to confirm if it is a solid, intact roof or rubble. The edges are indistinct, and there is no clear evidence of a smooth rectangle, tarps, or a dark break. Given the extreme low resolution and lack of discernible features, the safest classification is total loss.",
+        "visual_analysis": "The structure in Image B is highly blurred and lacks clear definition. While a faint, light-colored mass is present in a similar location to Image A, it is not possible to confirm if it is a solid, intact building footprint or rubble. The image quality is too low to reliably identify tarps, breaks, or complete absence of mass.",
         "damage_label": "Destroyed",
         "confidence_score": 65
       },
@@ -262,35 +262,35 @@
         "uid": "5c1e8a8d-d8e1-4b84-8a1a-db6782032967",
         "status": "success",
         "actual_label": "Minor Damage",
-        "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is visibly broken and fragmented compared to the solid rectangle in Image A. There are dark gaps and missing sections, indicating a large portion of the structure has collapsed or been removed.",
-        "damage_label": "Major Damage",
-        "confidence_score": 85
+        "predicted_label": "Minor Damage",
+        "visual_analysis": "The building footprint in Image B is largely intact but is covered with distinct bright blue tarps, indicating temporary repairs or sheltering over damaged areas. The structure is standing, but the presence of tarps is a clear indicator of damage.",
+        "damage_label": "Minor Damage",
+        "confidence_score": 95
       },
       {
         "uid": "22b22cd4-0022-43f1-b1c1-8b798dfa4237",
         "status": "success",
         "actual_label": "Destroyed",
-        "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is not a solid rectangle; it appears fragmented and broken, with large sections of the original mass missing or collapsed, showing a chaotic pattern of rubble and exposed ground.",
-        "damage_label": "Major Damage",
-        "confidence_score": 85
+        "predicted_label": "Destroyed",
+        "visual_analysis": "The building footprint in Image B is heavily fragmented and lacks a solid, continuous mass. It appears as a chaotic smudge of light and dark patches, consistent with rubble, rather than a standing structure. The solid rectangle from Image A is gone.",
+        "damage_label": "Destroyed",
+        "confidence_score": 95
       },
       {
         "uid": "66fb31e9-2d5a-4f5f-98e6-3e6ed5fb2928",
         "status": "success",
         "actual_label": "Destroyed",
-        "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is no longer a solid rectangle. It appears as a chaotic, fragmented smudge of rubble and debris, with no discernible structural mass remaining. The distinct white square from Image A is gone, replaced by a mottled, irregular pattern consistent with total collapse.",
-        "damage_label": "Destroyed",
-        "confidence_score": 95
+        "predicted_label": "Major Damage",
+        "visual_analysis": "The building footprint in Image B is no longer a solid rectangle; it appears fragmented and broken, with visible dark breaks and missing sections compared to the intact structure in Image A.",
+        "damage_label": "Major Damage",
+        "confidence_score": 85
       },
       {
         "uid": "5642cc0c-65da-4494-a7e6-44682d84753a",
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint from Image A is completely gone in Image B. There is no solid rectangle or structural mass remaining; instead, the area is a chaotic smudge of rubble and debris mixed with surrounding terrain.",
+        "visual_analysis": "The building footprint from Image A is no longer visible in Image B. The area is now a chaotic smudge of rubble and debris with no discernible structural mass or roof. This indicates total loss of the structure.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -299,7 +299,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is visibly broken and fragmented compared to the solid rectangle in Image A. There is a clear 'dark break' and missing mass in the center, indicating a large section has collapsed or been removed.",
+        "visual_analysis": "The building footprint in Image B is visibly broken and fragmented compared to the solid rectangle in Image A. There is a clear 'dark break' and missing mass, indicating a large section has collapsed or been removed.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -308,7 +308,7 @@
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building footprint in Image B is still present as a solid rectangle, similar in size and shape to Image A. While the image is low-resolution and slightly blurry, there is no visible 'dark break,' missing section, or rubble. The green patch is likely vegetation or sensor artifact, not a tarp. The structure appears intact.",
+        "visual_analysis": "The building footprint in Image B is still present as a solid rectangle, similar in size and shape to Image A. While the image is low-resolution and slightly blurry, there is no visible 'dark break,' missing section, or rubble. The green patch is likely sensor noise or vegetation, not a tarp. The structure appears intact.",
         "damage_label": "No Damage",
         "confidence_score": 85
       },
@@ -316,9 +316,9 @@
         "uid": "193b10c9-8a3c-4705-a19a-7e9762820ca3",
         "status": "success",
         "actual_label": "Destroyed",
-        "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is broken and fragmented compared to the solid rectangle in Image A. There is a visible dark break and missing mass, indicating structural collapse.",
-        "damage_label": "Major Damage",
+        "predicted_label": "No Damage",
+        "visual_analysis": "The structure in Image B is a solid, dark rectangle of similar size and shape to the one in Image A. While the image is low-resolution and slightly blurry, there is no visible 'dark break,' missing section, tarp, or rubble. The mass anchor rule applies: the building is standing.",
+        "damage_label": "No Damage",
         "confidence_score": 85
       },
       {
@@ -326,16 +326,16 @@
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Minor Damage",
-        "visual_analysis": "The building in Image B shows a distinct blue tarp covering part of the structure, which is a clear indicator of Minor Damage according to the classification rules.",
+        "visual_analysis": "The building in Image B is standing but shows a distinct bright blue tarp covering part of the roof area, which is not present in Image A. The overall rectangular mass is still visible, indicating the structure is not collapsed or missing.",
         "damage_label": "Minor Damage",
-        "confidence_score": 95
+        "confidence_score": 90
       },
       {
         "uid": "92dbf467-e76f-463a-99ce-0caf1f851f7d",
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Minor Damage",
-        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. However, a large, distinct bright blue patch is visible on the roof, which is a clear indicator of a tarp being placed over the structure.",
+        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. However, a large, distinct bright blue patch is visible on the roof, which is a clear indicator of a tarp being placed over the structure. This matches the criteria for Minor Damage.",
         "damage_label": "Minor Damage",
         "confidence_score": 95
       },
@@ -344,25 +344,25 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The structure in Image A is a faint, low-resolution rectangle. In Image B, the same location shows a chaotic, irregular smudge of mixed colors (browns, grays, and greens) with no discernible solid footprint or roof. The building mass is not standing; it appears to be rubble or bare earth.",
+        "visual_analysis": "The structure in Image A appears as a solid, smooth rectangle. In Image B, the same footprint is visible but is now a chaotic smudge of rubble and earth tones with no discernible roof or walls. The building mass is not standing and has been replaced by debris and bare ground.",
         "damage_label": "Destroyed",
-        "confidence_score": 85
+        "confidence_score": 95
       },
       {
         "uid": "e43a0390-8904-4f06-8f62-c17ffb37726b",
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Minor Damage",
-        "visual_analysis": "The building in Image B is standing but shows a distinct bright blue tarp covering a portion of the roof, which is a clear indicator of Minor Damage according to the classification rules.",
+        "visual_analysis": "The building in Image B is standing but shows a distinct bright blue tarp covering a portion of the roof, indicating repair or temporary covering after damage. The overall rectangular mass is still present, but the high-contrast blue patch is clearly visible and not attributable to sensor noise or color shift.",
         "damage_label": "Minor Damage",
-        "confidence_score": 95
+        "confidence_score": 92
       },
       {
         "uid": "506cf0bb-e690-41c1-b94b-1c7a6b30d197",
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Minor Damage",
-        "visual_analysis": "The building in Image B is standing and retains a solid rectangular mass similar to Image A. There is a distinct blue patch visible on the structure, which is consistent with a tarp covering part of the roof or wall.",
+        "visual_analysis": "The building in Image B is not a smooth, solid rectangle. It appears fragmented and chaotic, with a visible blue tarp and high-contrast patches, indicating structural compromise. The mass is not intact, and there is a clear loss of the original solid footprint.",
         "damage_label": "Minor Damage",
         "confidence_score": 85
       },
@@ -371,7 +371,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B appears as a solid rectangle of similar size to Image A, with no visible dark breaks, missing sections, or tarps. The slight blur and color variation are consistent with sensor noise and do not indicate structural damage.",
+        "visual_analysis": "The building in Image B appears as a solid rectangle of similar size to Image A, with no visible dark breaks, missing sections, or tarps. The slight blurriness and color shift are within acceptable sensor noise limits.",
         "damage_label": "No Damage",
         "confidence_score": 95
       },
@@ -380,7 +380,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. While the image is low-resolution and slightly blurry, there is no visible dark break, missing section, or tarping. The surface appears smooth and intact, consistent with the 'No Damage' criteria despite potential sensor noise or color shifts.",
+        "visual_analysis": "The building in Image B is standing and retains a solid rectangular mass similar to Image A. While the image is low-resolution and slightly blurry, there is no visible dark break, missing section, or tarping. The structure appears intact, with only minor sensor noise or color variation.",
         "damage_label": "No Damage",
         "confidence_score": 85
       },
@@ -389,7 +389,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building in Image A is a solid, smooth rectangle. In Image B, that rectangle is completely gone and replaced by a chaotic smudge of rubble and debris. There is no solid mass or footprint remaining.",
+        "visual_analysis": "The building footprint in Image A is a solid, smooth rectangle. In Image B, that rectangle is gone and replaced by a chaotic smudge of rubble and debris, with no discernible structural mass remaining.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -398,7 +398,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is not a solid rectangle; it appears fragmented and chaotic, with no clear roof structure remaining. The mass is broken into rubble and debris, indicating total structural loss.",
+        "visual_analysis": "The structure in Image B is a chaotic smudge of rubble and debris, with no discernible solid rectangular mass remaining. The footprint from Image A is completely obscured by scattered material, indicating total structural loss.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -407,7 +407,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is not a solid rectangle; it is a chaotic smudge of rubble with no discernible roof structure or walls. The mass is fragmented and dispersed, indicating total structural loss.",
+        "visual_analysis": "The building footprint in Image B is not a solid rectangle; it is a chaotic smudge of rubble and debris. The structural mass is gone, replaced by a scattered, light-colored mess consistent with total collapse.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -416,7 +416,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building in Image A is a solid, smooth rectangle. In Image B, that rectangle is completely gone and replaced by a chaotic smudge of rubble and debris. There is no visible structural mass remaining.",
+        "visual_analysis": "The building in Image A is a solid, smooth rectangle. In Image B, that rectangle is completely gone and replaced by a chaotic pile of rubble and debris. There is no discernible structural mass remaining.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -425,7 +425,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building in Image B is not a smooth, solid rectangle. It appears heavily fragmented and collapsed, with no clear roof structure remaining. The footprint is broken and chaotic, showing a significant loss of structural mass compared to Image A.",
+        "visual_analysis": "The building footprint in Image B is broken and fragmented. The solid rectangular mass from Image A is no longer intact; large sections appear missing or caved-in, with visible dark breaks and rubble. This is not sensor noise\u2014it\u2019s a structural failure.",
         "damage_label": "Major Damage",
         "confidence_score": 95
       },
@@ -433,17 +433,17 @@
         "uid": "eb854e1c-241d-41d5-b0bb-57d9b48a9679",
         "status": "success",
         "actual_label": "Minor Damage",
-        "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is broken and fragmented, with visible dark gaps and missing sections compared to the solid rectangle in Image A. This indicates a massive structural failure.",
-        "damage_label": "Major Damage",
-        "confidence_score": 85
+        "predicted_label": "Destroyed",
+        "visual_analysis": "The building footprint in Image B is a chaotic smudge of rubble and debris, with no discernible solid roof or walls remaining. The structure has completely lost its form and is reduced to a scattered pile, indicating total loss.",
+        "damage_label": "Destroyed",
+        "confidence_score": 95
       },
       {
         "uid": "2837706b-ffe9-4b2b-b551-603bb6aa943c",
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint from Image A is completely gone in Image B. What remains is a chaotic smudge of rubble and debris with no discernible structural mass or roof. This matches the 'Destroyed' criterion of total loss.",
+        "visual_analysis": "The building footprint from Image A is completely gone in Image B. What remains is a chaotic smudge of rubble and debris with no discernible structural mass or roof. This indicates total loss.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -452,7 +452,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The structure in Image A appears as a faint, somewhat smooth, light-colored rectangle amid greenery. In Image B, that same footprint is replaced by a chaotic, mottled patch of brown and gray with no discernible solid roof or walls. The building mass is gone, leaving what looks like bare earth or rubble.",
+        "visual_analysis": "The structure in Image A appears as a faint, somewhat smooth, light-colored rectangle amidst greenery. In Image B, the same location shows a chaotic, mottled texture of brown and gray with no discernible solid rectangular shape. The building mass is not standing, and there is no evidence of a roof or walls\u2014only a smudge of rubble or bare earth.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -461,7 +461,7 @@
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The structure in Image B is a chaotic smudge of rubble and debris, with no discernible solid rectangular mass remaining. The footprint is obliterated, replaced by a jumble of light and dark fragments, consistent with total structural collapse.",
+        "visual_analysis": "The building footprint in Image B is not clearly visible as a solid rectangle; instead, it appears as a chaotic smudge of rubble and debris, with no discernible roof structure or walls. The area is largely flattened and mixed with surrounding ground, indicating total loss.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -470,7 +470,7 @@
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Minor Damage",
-        "visual_analysis": "The building in Image B is standing and retains a similar rectangular footprint to Image A. However, there are distinct bright blue patches visible on the roof, which are consistent with emergency tarps. This indicates Minor Damage.",
+        "visual_analysis": "The building in Image B is standing but is covered with a large, bright blue tarp, which is a clear indicator of Minor Damage according to the classification rules.",
         "damage_label": "Minor Damage",
         "confidence_score": 95
       },
@@ -479,16 +479,16 @@
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Minor Damage",
-        "visual_analysis": "The building in Image B shows a distinct bright blue tarp covering part of the roof area, which is not present in Image A. The main rectangular structure is still standing, but the presence of the tarp indicates repair or temporary covering after damage.",
+        "visual_analysis": "The building in Image B is standing but has a distinct bright blue tarp covering part of its roof, which is a clear indicator of Minor Damage according to the classification rules.",
         "damage_label": "Minor Damage",
-        "confidence_score": 90
+        "confidence_score": 95
       },
       {
         "uid": "cac0c232-fad7-4857-9cf6-14e581a4db44",
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is broken and fragmented, with visible dark gaps and missing sections compared to the solid rectangle in Image A. This indicates a massive structural failure.",
+        "visual_analysis": "The building footprint in Image B is visibly broken and fragmented, with a large dark area indicating a collapsed or missing section of the structure. The solid rectangle from Image A is no longer intact, showing clear signs of massive structural failure.",
         "damage_label": "Major Damage",
         "confidence_score": 95
       },
@@ -497,7 +497,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint from Image A is completely gone in Image B. What remains is a chaotic, light-colored smudge of rubble and debris with no discernible structural mass or roof. This matches the 'Destroyed' criterion of total loss.",
+        "visual_analysis": "The building is gone. Image B shows a chaotic smudge of rubble and bare earth where the solid rectangular structure was in Image A.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -506,16 +506,16 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The structure in Image B is not clearly visible as a solid rectangle; it appears as a chaotic smudge of light and dark patches with no discernible roof or walls, suggesting total loss of structural mass.",
+        "visual_analysis": "The structure in Image B is not clearly visible as a solid rectangle; it appears as a chaotic smudge of light and dark patches with no discernible roof or walls. The mass anchor is not present, and the footprint is obliterated, consistent with total loss.",
         "damage_label": "Destroyed",
-        "confidence_score": 85
+        "confidence_score": 95
       },
       {
         "uid": "84300028-eca6-416e-ab66-1fd0a2b8736b",
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is not a solid rectangle; it appears fragmented and broken, with visible dark gaps and missing sections compared to the smoother, more intact mass in Image A. This indicates a significant structural failure.",
+        "visual_analysis": "The building footprint in Image B is visibly broken and fragmented, with large sections of the structure missing or collapsed, creating a chaotic pattern of debris and exposed ground. This is not a smooth, solid rectangle and shows clear signs of massive structural failure.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -524,7 +524,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is completely gone, replaced by a chaotic smudge of rubble and debris. There is no solid rectangular mass remaining, indicating total structural loss.",
+        "visual_analysis": "The building footprint in Image B is not a solid rectangle; it is a chaotic smudge of rubble and debris. The distinct, smooth roof structure seen in Image A is completely gone, replaced by a jumble of light and dark fragments.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -533,7 +533,7 @@
         "status": "success",
         "actual_label": "Major Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is broken and fragmented compared to the solid rectangle in Image A. There is a visible dark break and missing sections of the structure, indicating massive failure.",
+        "visual_analysis": "The building footprint in Image B is fragmented and irregular compared to the solid rectangle in Image A. There is a visible 'dark break' and missing sections of the structure, indicating massive failure.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -541,17 +541,17 @@
         "uid": "8cdcfef9-1292-40aa-962a-59283f949046",
         "status": "success",
         "actual_label": "Major Damage",
-        "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is a chaotic smudge of rubble and debris, with no discernible solid rectangular structure remaining. The mass is fragmented and lacks the coherent shape seen in Image A, indicating total loss.",
-        "damage_label": "Destroyed",
-        "confidence_score": 95
+        "predicted_label": "Major Damage",
+        "visual_analysis": "The building footprint in Image B is fragmented and lacks a solid, continuous mass. There are visible dark breaks and missing sections compared to the intact rectangle in Image A, indicating a large portion of the structure has collapsed or is missing.",
+        "damage_label": "Major Damage",
+        "confidence_score": 85
       },
       {
         "uid": "73e218d4-2ce2-4290-848c-39dd276d8f5b",
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint from Image A is completely gone in Image B. What remains is a chaotic, light-colored smudge of rubble and debris, with no discernible structural mass or roof outline. This matches the 'Destroyed' criterion of total loss.",
+        "visual_analysis": "The building in Image A is a solid, smooth rectangle. In Image B, the structure is completely gone, replaced by a chaotic smudge of rubble and debris with no discernible roof or walls. This matches the 'Destroyed' criterion.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       },
@@ -569,7 +569,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B is standing and retains a solid rectangular footprint similar to Image A. While the image is low-resolution and slightly blurry, there is no visible dark break, missing section, or tarping. The structure appears intact, with only minor sensor noise or color shift.",
+        "visual_analysis": "The building in Image B is standing with a solid rectangular footprint similar to Image A. While the image is low-resolution and slightly blurry, there is no visible dark break, missing section, or tarping. The structure appears intact, forgiving sensor noise and color shifts.",
         "damage_label": "No Damage",
         "confidence_score": 85
       },
@@ -578,7 +578,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building footprint in Image B is still present as a solid rectangle, similar in size and shape to Image A. While the image is low-resolution and slightly blurry, there is no visible dark break, missing section, or tarping. The structure appears to be standing with a smooth, solid mass.",
+        "visual_analysis": "The building footprint in Image B is still present as a solid rectangle, similar in size and shape to Image A. While the image is low-resolution and slightly blurry, there is no visible dark break, missing section, or tarping. The structure appears intact, forgiving sensor noise and color shifts.",
         "damage_label": "No Damage",
         "confidence_score": 85
       },
@@ -587,7 +587,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building in Image B is standing but shows a large, dark, irregular break in its structure, indicating a significant portion of the mass is missing or caved-in compared to the solid rectangle in Image A.",
+        "visual_analysis": "The building in Image B is standing but shows a distinct dark, irregular patch in the center of the roof/structure, indicating a significant portion of the mass is missing or caved-in. This matches the 'Major Damage' trigger of a visible 'dark break' or missing section.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -596,7 +596,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B appears as a solid, continuous rectangle of similar size and shape to Image A. While the image is low-resolution and slightly blurry, there are no visible dark breaks, missing sections, tarps, or rubble. The mass anchor rule applies: the structure is standing with a smooth, solid footprint.",
+        "visual_analysis": "The building in Image B appears as a solid, albeit blurry, rectangular mass similar in size and position to Image A. There are no visible bright blue tarps, white patches, dark breaks, or missing sections. The slight blur and color shift are consistent with sensor noise and do not indicate structural damage.",
         "damage_label": "No Damage",
         "confidence_score": 85
       },
@@ -605,16 +605,16 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B appears as a solid, intact rectangle of similar size and shape to Image A. While the image is low-resolution and slightly blurry, there are no visible dark breaks, missing sections, tarps, or rubble. The structure is standing and the mass is preserved.",
+        "visual_analysis": "The building in Image B appears as a solid, continuous rectangle with no visible dark breaks, missing sections, or tarps. While the image is blurry and the color is slightly different from Image A, the structural mass is intact and matches the footprint of the pre-disaster building. Per the rules, this qualifies as No Damage.",
         "damage_label": "No Damage",
-        "confidence_score": 85
+        "confidence_score": 95
       },
       {
         "uid": "8e8b3ab7-38ea-4e8f-a4e6-9a308ebf39a1",
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B appears as a solid, continuous rectangle of similar size and shape to Image A. While the image is low-resolution and slightly blurry, there are no visible bright blue tarps, white patches, dark breaks, or missing sections of the structure. The roof surface appears smooth and intact, consistent with the 'No Damage' criteria.",
+        "visual_analysis": "The building in Image B appears as a solid, intact rectangle of similar size and shape to Image A. While the image is low-resolution and slightly blurry, there are no visible blue tarps, white patches, dark breaks, or missing sections. The structure is standing and the mass is continuous, which aligns with the 'No Damage' criteria under the critical rules.",
         "damage_label": "No Damage",
         "confidence_score": 85
       },
@@ -623,7 +623,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "No Damage",
-        "visual_analysis": "The building in Image B appears as a solid, intact rectangle with no visible dark breaks, missing sections, or tarps. The edges are slightly blurry, but this is consistent with sensor noise and low resolution. The mass anchor rule confirms the building is standing with a similar footprint to Image A.",
+        "visual_analysis": "The building in Image B appears as a solid, intact rectangle with no visible dark breaks, missing sections, or tarps. The slight color and blur differences are consistent with sensor noise and not structural damage.",
         "damage_label": "No Damage",
         "confidence_score": 95
       },
@@ -641,7 +641,7 @@
         "status": "success",
         "actual_label": "No Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is not clearly visible as a solid rectangle; it appears blurred and indistinct, with no clear structural mass remaining. There is no evidence of a smooth roof or standing walls. The area looks like a chaotic smudge with possible rubble or debris, suggesting total loss.",
+        "visual_analysis": "The building footprint in Image B is not clearly visible as a solid rectangle; the structure appears to be largely missing or reduced to rubble, with no discernible roof or walls. The area is a chaotic smudge of indistinct shapes and colors, consistent with total structural loss.",
         "damage_label": "Destroyed",
         "confidence_score": 85
       },
@@ -668,7 +668,7 @@
         "status": "success",
         "actual_label": "Destroyed",
         "predicted_label": "Major Damage",
-        "visual_analysis": "The building footprint in Image B is broken and fragmented, with visible dark gaps and missing sections compared to the solid rectangle in Image A. This indicates a massive failure of the structure.",
+        "visual_analysis": "The building footprint in Image B is visibly broken and fragmented compared to the solid rectangle in Image A. There are dark breaks and missing sections of the mass, indicating a massive structural failure.",
         "damage_label": "Major Damage",
         "confidence_score": 85
       },
@@ -686,7 +686,7 @@
         "status": "success",
         "actual_label": "Minor Damage",
         "predicted_label": "Destroyed",
-        "visual_analysis": "The building footprint in Image B is a chaotic smudge of rubble and debris, with no discernible solid structure or roof remaining. The mass is gone, replaced by a jumble of light and dark fragments.",
+        "visual_analysis": "The building footprint is no longer visible as a solid rectangle. Image B shows a chaotic, smudged area with no discernible structural mass, consistent with total loss.",
         "damage_label": "Destroyed",
         "confidence_score": 95
       }

@@ -8,8 +8,9 @@ const IMAGE_DIR = process.argv[2];
 const OUTPUT_FILE = process.argv[3] || "benchmark_results.json";
 
 const MODELS = [
-    "amazon.nova-pro-v1:0",
-    "google.gemma-3-12b-it"
+    // "amazon.nova-pro-v1:0",
+    // "google.gemma-3-12b-it",
+    "qwen.qwen3-vl-235b-a22b"
 ];
 
 const GROUND_TRUTH_MAPPING = {
@@ -33,18 +34,33 @@ async function analysePairWithRetry(modelId, preA, postB, retries = 3) {
     const imageABytes = fs.readFileSync(preA);
     const imageBBytes = fs.readFileSync(postB);
 
-    const userPrompt = `You are an expert disaster response analyst. Analyze the provided pre-disaster (Image A) and post-disaster (Image B) images of the same building.
-Assess the level of structural damage sustained using the following classification schema:
-No Damage: The building appears undisturbed with no visible structural changes or debris.
-Minor Damage: Superficial damage, minor roof damage (e.g., missing shingles), or small amounts of debris. The core structure remains intact.
-Major Damage: Significant structural failure, partial building collapse, or substantial roof/wall loss.
-Destroyed: Complete or near-complete collapse of the building; only the foundation or a rubble pile remains.
-Based on your comparative visual analysis, provide your response strictly in the following JSON format and nothing else:
-{
-  "damage_label": "[Select exactly one: No Damage, Minor Damage, Major Damage, Destroyed]",
-  "confidence_score": "[Provide a percentage from 0% to 100%]",
-  "justification": "[Provide a brief, 1-2 sentence explanation detailing the specific visual evidence from Image B compared to Image A that supports your classification.]"
-}`;
+    const userPrompt = `You are an expert disaster response analyst comparing two aerial, top-down images of the same building: Image A (before) and Image B (after).
+
+    Your task is to determine the damage severity based STRICTLY on the official classification scale below.
+
+    Official Classification Scale:
+    - No damage: Undisturbed. No sign of water, structural damage, shingle damage, or burn marks.
+    - Minor damage: Building partially burnt, water surrounding the structure, volcanic flow nearby, roof elements missing, or visible cracks.
+    - Major damage: Partial wall or roof collapse, encroaching volcanic flow, or the structure is surrounded by water or mud.
+    - Destroyed: Structure is scorched, completely collapsed, partially or completely covered with water or mud, or no longer present.
+
+    CRITICAL TRANSLATION FOR PADDED AERIAL FLOOD IMAGERY:
+    The official scale can be confusing for top-down images that include surrounding neighborhood context (padding). You MUST apply this translation key:
+
+    1. "No sign of water" (No Damage): This applies ONLY to the building's specific footprint. Because these images have padding, you WILL see floodwater in the background, streets, or neighboring yards. YOU MUST IGNORE BACKGROUND WATER. If the specific house and its immediate footprint match Image A, select No Damage, but be careful to ensure the water is not in the building's footprint. Do not penalize the house for water in the padded background.
+    2. "Water surrounding" (Minor) vs "Surrounded by water" (Major): This is a distinction of DEPTH. 
+    - Minor Damage = Shallow water. Water has breached the immediate yard and is touching the house, but ground features (fences, grass, driveways) around it are still visible.
+    - Major Damage = Deep water. The water is a thick, dark mass that completely hides the ground and the base of the house, making the house look like an island in a lake. OR the roof is visibly caved in.
+    3. Destroyed: The roof is completely gone, the building is washed away, or entirely submerged under water.
+
+    Respond strictly in this JSON format and nothing else:
+    {
+    "roof_and_structure_status": "[Compare the building in B to A. Is the geometry strictly identical?]",
+    "floodwater_translation": "[Is water just in the background/street, shallow in the yard touching the house, or deep/submerging the ground?]",
+    "damage_label": "[Select exactly one: No Damage, Minor Damage, Major Damage, Destroyed]",
+    "confidence_score": "[Provide a percentage from 0% to 100%]"
+    }`;
+
 
     const messages = [
         {
@@ -214,9 +230,10 @@ async function runBenchmark() {
                     uid: b.uid,
                     status: "success",
                     actual_label: actualLabel,
+                    roof_and_structure_status: analysis.roof_and_structure_status,
+                    floodwater_translation: analysis.floodwater_translation,
                     predicted_label: predictedLabel,
                     confidence_score: analysis.confidence_score,
-                    justification: analysis.justification
                 });
 
                 const isCorrect = predictedLabel === actualLabel;
