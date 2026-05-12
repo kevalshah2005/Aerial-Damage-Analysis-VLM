@@ -1,4 +1,10 @@
 import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime"
+import {
+  appendMessage,
+  assertConversationOwnership,
+  updateConversationMetadata,
+} from "@/lib/chat-store"
+import { getAuthenticatedUserId } from "@/lib/auth-server"
 
 const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION ?? "us-east-1" })
 const MODEL_ID = process.env.VLM_MODEL_ID ?? "qwen.qwen3-vl-235b-a22b"
@@ -10,7 +16,7 @@ type ImagePart = {
 
 export async function POST(req: Request) {
   try {
-    const { text, images }: { text: string; images: ImagePart[] } = await req.json()
+    const { text, images, conversationId }: { text: string; images: ImagePart[]; conversationId?: string } = await req.json()
 
     if (!text && (!images || images.length === 0)) {
       return Response.json({ error: "text or images required" }, { status: 400 })
@@ -61,6 +67,29 @@ Respond strictly in this JSON format:
 
     const response = await client.send(command)
     const outputText = response.output?.message?.content?.[0]?.text ?? ""
+
+    // Save to DynamoDB if conversationId provided (auth optional — skip silently if unavailable)
+    if (conversationId) {
+      try {
+        const userId = await getAuthenticatedUserId(req)
+        await assertConversationOwnership(conversationId, userId)
+        const now = new Date().toISOString()
+        const userContent = [
+          images?.length ? `[${images.length} image(s) attached]` : "",
+          text,
+        ].filter(Boolean).join(" ")
+        await appendMessage({ conversationId, userId, role: "user", content: userContent })
+        await appendMessage({ conversationId, userId, role: "assistant", content: outputText, modelId: MODEL_ID })
+        await updateConversationMetadata({
+          conversationId,
+          updatedAt: now,
+          lastMessagePreview: outputText.slice(0, 180),
+          incrementMessageCountBy: 2,
+        })
+      } catch {
+        // Auth unavailable or conversation mismatch — proceed without saving
+      }
+    }
 
     return Response.json({ text: outputText })
   } catch (error) {
