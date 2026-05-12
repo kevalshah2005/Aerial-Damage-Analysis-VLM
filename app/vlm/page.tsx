@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-
-const genId = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
 import { useRouter } from 'next/navigation'
 import { useAuthenticator } from '@aws-amplify/ui-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+
+const genId = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
 import {
   Send,
   ImagePlus,
@@ -283,7 +285,34 @@ export default function VLMPage() {
                             <span className="text-[10px] font-semibold text-primary uppercase tracking-widest">VLM</span>
                           </div>
                         )}
-                        {msg.text}
+                        {msg.role === 'user' ? (
+                          <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        ) : (
+                          <div className="text-xs leading-relaxed break-words">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                h1: ({ children }) => <h1 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h1>,
+                                h2: ({ children }) => <h2 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h2>,
+                                h3: ({ children }) => <h3 className="text-xs font-semibold mt-2 mb-1 first:mt-0">{children}</h3>,
+                                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                ul: ({ children }) => <ul className="list-disc ml-4 mb-2 last:mb-0">{children}</ul>,
+                                ol: ({ children }) => <ol className="list-decimal ml-4 mb-2 last:mb-0">{children}</ol>,
+                                li: ({ children }) => <li className="mb-1">{children}</li>,
+                                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                                code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) =>
+                                  inline ? (
+                                    <code className="px-1 py-0.5 rounded bg-muted text-[11px]">{children}</code>
+                                  ) : (
+                                    <code className="block p-2 rounded bg-muted text-[11px] overflow-x-auto">{children}</code>
+                                  ),
+                                a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-primary underline">{children}</a>,
+                              }}
+                            >
+                              {msg.text}
+                            </ReactMarkdown>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
