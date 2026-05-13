@@ -63,7 +63,7 @@ const SUGGESTED_PROMPTS = [
 ]
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  const session = await fetchAuthSession()
+  const session = await fetchAuthSession({ forceRefresh: true })
   const token = session.tokens?.idToken?.toString()
   if (!token) throw new Error("No auth token")
   return { Authorization: `Bearer ${token}` }
