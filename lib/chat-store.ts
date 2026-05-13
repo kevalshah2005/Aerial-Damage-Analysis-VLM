@@ -42,6 +42,7 @@ export type ChatMessage = {
   role: ChatRole
   content: string
   modelId?: string
+  imageUrls?: string[]
 }
 
 export async function createConversation(
@@ -143,6 +144,7 @@ export async function appendMessage(input: {
   role: ChatRole
   content: string
   modelId?: string
+  imageUrls?: string[]
 }): Promise<ChatMessage> {
   const { messagesTable } = getTableNames()
   const ddb = getDdbClient()
@@ -154,6 +156,7 @@ export async function appendMessage(input: {
     role: input.role,
     content: input.content,
     modelId: input.modelId,
+    ...(input.imageUrls?.length ? { imageUrls: input.imageUrls } : {}),
   }
 
   await ddb.send(

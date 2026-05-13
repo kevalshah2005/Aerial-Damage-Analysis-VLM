@@ -38,6 +38,7 @@ type Message = {
   role: 'user' | 'assistant'
   text: string
   images?: AttachedImage[]
+  imageUrls?: string[]
 }
 
 type Conversation = {
@@ -152,10 +153,11 @@ export default function VLMPage() {
       const res = await fetch(`/api/vlm/conversations/${conversationId}`, { headers })
       if (res.ok) {
         const data = await res.json()
-        const loaded: Message[] = (data.messages ?? []).map((m: { messageId: string; role: string; content: string }) => ({
+        const loaded: Message[] = (data.messages ?? []).map((m: { messageId: string; role: string; content: string; imageUrls?: string[] }) => ({
           id: m.messageId,
           role: m.role as 'user' | 'assistant',
           text: m.content,
+          imageUrls: m.imageUrls,
         }))
         setMessages(loaded)
         setActiveConversationId(conversationId)
@@ -419,16 +421,22 @@ export default function VLMPage() {
                     </div>
 
                     <div className={`flex flex-col gap-2 max-w-[75%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      {msg.images && msg.images.length > 0 && (
+                      {(msg.images?.length || msg.imageUrls?.length) ? (
                         <div className={`flex flex-wrap gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {msg.images.map(img => (
+                          {msg.images?.map(img => (
                             <div key={img.id} className="relative rounded-lg overflow-hidden border border-border">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={img.previewUrl} alt={img.name} className="h-36 w-auto max-w-xs object-cover" />
                             </div>
                           ))}
+                          {msg.imageUrls?.map((url, i) => (
+                            <div key={i} className="relative rounded-lg overflow-hidden border border-border">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt={`image-${i}`} className="h-36 w-auto max-w-xs object-cover" />
+                            </div>
+                          ))}
                         </div>
-                      )}
+                      ) : null}
                       {msg.text && (
                         <div className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed ${
                           msg.role === 'user'

@@ -5,6 +5,7 @@ import {
   updateConversationMetadata,
 } from "@/lib/chat-store"
 import { getAuthenticatedUserId } from "@/lib/auth-server"
+import { uploadImageToS3 } from "@/lib/s3"
 
 const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION ?? "us-east-1" })
 const MODEL_ID = process.env.VLM_MODEL_ID ?? "qwen.qwen3-vl-235b-a22b"
@@ -74,11 +75,16 @@ Respond strictly in this JSON format:
         const userId = await getAuthenticatedUserId(req)
         await assertConversationOwnership(conversationId, userId)
         const now = new Date().toISOString()
-        const userContent = [
-          images?.length ? `[${images.length} image(s) attached]` : "",
-          text,
-        ].filter(Boolean).join(" ")
-        await appendMessage({ conversationId, userId, role: "user", content: userContent })
+
+        // Upload images to S3
+        const imageUrls: string[] = []
+        for (let i = 0; i < (images ?? []).length; i++) {
+          const img = images[i]
+          const url = await uploadImageToS3(img.base64, img.mediaType, conversationId, i)
+          imageUrls.push(url)
+        }
+
+        await appendMessage({ conversationId, userId, role: "user", content: text, imageUrls: imageUrls.length ? imageUrls : undefined })
         await appendMessage({ conversationId, userId, role: "assistant", content: outputText, modelId: MODEL_ID })
         await updateConversationMetadata({
           conversationId,
