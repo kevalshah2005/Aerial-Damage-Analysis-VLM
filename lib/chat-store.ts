@@ -81,11 +81,12 @@ export async function listConversations(userId: string, source?: string): Promis
       TableName: conversationsTable,
       IndexName: USER_UPDATED_AT_INDEX,
       KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeNames: { "#src": "source" },
       ExpressionAttributeValues: {
         ":userId": userId,
         ...(source ? { ":source": source } : {}),
       },
-      FilterExpression: source ? "source = :source" : "attribute_not_exists(source)",
+      FilterExpression: source ? "#src = :source" : "attribute_not_exists(#src)",
       ScanIndexForward: false,
     })
   )
