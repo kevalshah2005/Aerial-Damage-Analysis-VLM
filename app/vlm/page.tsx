@@ -251,9 +251,10 @@ export default function VLMPage() {
     try {
       const images = await Promise.all(imagesToSend.map(img => fileToBase64(img.file)))
 
+      const authHeaders = skipAuth ? {} : await getAuthHeader().catch(() => ({}))
       const res = await fetch('/api/vlm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ text, images, conversationId: convId }),
       })
 
