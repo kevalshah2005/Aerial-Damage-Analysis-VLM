@@ -48,7 +48,7 @@ function loadManifestSummary(contentDir: string): string | null {
 }
 
 function loadPatchSummaries(contentDir: string): string | null {
-  const summariesPath = path.join(contentDir, "chat-context", "patch_summaries.json")
+  const summariesPath = path.join(contentDir, "chat-context", "predicted_patch_summaries.json")
   const raw = safeReadFile(summariesPath)
   if (!raw) return null
 
@@ -147,7 +147,7 @@ export function buildChatDataContext(): string {
   if (patchSummaries) {
     sections.push(
       [
-        "### Per-Patch Damage Summaries (Pre-computed from Labels)",
+        "### Per-Patch Damage Summaries (Model Predictions)",
         trimSection(patchSummaries, MAX_SECTION_CHARS),
       ].join("\n")
     )

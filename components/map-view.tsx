@@ -41,6 +41,12 @@ const PRELOAD_BATCH_SIZE = 4
 const PRELOAD_START_DELAY_MS = 1400
 const PRELOAD_BATCH_DELAY_MS = 40
 const BUILDING_FETCH_CONCURRENCY = 8
+const configuredBuildingOffsetLat = Number.parseFloat(process.env.NEXT_PUBLIC_BUILDING_OFFSET_LAT ?? "0.000035")
+const configuredBuildingOffsetLng = Number.parseFloat(process.env.NEXT_PUBLIC_BUILDING_OFFSET_LNG ?? "-0.000045")
+const BUILDING_ALIGNMENT_OFFSET = {
+  lat: Number.isFinite(configuredBuildingOffsetLat) ? configuredBuildingOffsetLat : 0.000035,
+  lng: Number.isFinite(configuredBuildingOffsetLng) ? configuredBuildingOffsetLng : -0.000045,
+}
 const BUILDINGS_SOURCE_ID = "buildings-all"
 const BUILDINGS_FILL_LAYER_ID = "buildings-all-fill"
 const BUILDINGS_LINE_LAYER_ID = "buildings-all-line"
@@ -53,7 +59,83 @@ const OUTLINE_GRID_SUBDIVISIONS = 24
 
 const JOPLIN_LNG = -94.5133
 const JOPLIN_LAT = 37.0842
-const JOPLIN_MARKER_MAX_ZOOM = 9
+const JOPLIN_MARKER_MAX_ZOOM = 12.5
+const DAMAGE_PATH_SOURCE_ID = "damage-path"
+const DAMAGE_PATH_GLOW_ID = "damage-path-glow"
+const DAMAGE_PATH_LINE_ID = "damage-path-line"
+
+// ── Weighted polynomial path fitting ──────────────────────────────────────
+
+function gaussElimPath(A: number[][], b: number[]): number[] | null {
+  const n = b.length
+  const M = A.map((row, i) => [...row, b[i]])
+  for (let col = 0; col < n; col++) {
+    let piv = col
+    for (let row = col + 1; row < n; row++) if (Math.abs(M[row][col]) > Math.abs(M[piv][col])) piv = row
+    if (Math.abs(M[piv][col]) < 1e-14) return null
+    ;[M[col], M[piv]] = [M[piv], M[col]]
+    const p = M[col][col]
+    for (let j = col; j <= n; j++) M[col][j] /= p
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue
+      const f = M[row][col]
+      for (let j = col; j <= n; j++) M[row][j] -= f * M[col][j]
+    }
+  }
+  return M.map(r => r[n])
+}
+
+function fitDamagePath(pts: { lon: number; lat: number; weight: number }[], nOut = 120): [number, number][] {
+  const valid = pts.filter(p => p.weight > 0)
+  if (valid.length < 4) return []
+  const totalW = valid.reduce((s, p) => s + p.weight, 0)
+  const lonMean = valid.reduce((s, p) => s + p.lon * p.weight, 0) / totalW
+  const lonVar = valid.reduce((s, p) => s + p.weight * (p.lon - lonMean) ** 2, 0) / totalW
+  const lonStd = Math.sqrt(lonVar) || 1
+  const xs = valid.map(p => (p.lon - lonMean) / lonStd)
+  const ys = valid.map(p => p.lat)
+  const ws = valid.map(p => p.weight)
+  const nd = 3 // quadratic: c0 + c1*x + c2*x^2
+  const XtWX = Array.from({ length: nd }, () => new Array(nd).fill(0))
+  const XtWy = new Array(nd).fill(0)
+  for (let i = 0; i < xs.length; i++) {
+    const phi = [1, xs[i], xs[i] ** 2]
+    for (let j = 0; j < nd; j++) {
+      XtWy[j] += ws[i] * phi[j] * ys[i]
+      for (let k = 0; k < nd; k++) XtWX[j][k] += ws[i] * phi[j] * phi[k]
+    }
+  }
+  const coeffs = gaussElimPath(XtWX, XtWy)
+  if (!coeffs) return []
+  const lonMin = Math.min(...valid.map(p => p.lon))
+  const lonMax = Math.max(...valid.map(p => p.lon))
+  return Array.from({ length: nOut }, (_, i) => {
+    const lon = lonMin + (i / (nOut - 1)) * (lonMax - lonMin)
+    const xn = (lon - lonMean) / lonStd
+    const lat = coeffs[0] + coeffs[1] * xn + coeffs[2] * xn ** 2
+    return [lon, lat] as [number, number]
+  })
+}
+
+async function fetchAndFitDamagePath(): Promise<[number, number][]> {
+  const [geoRes, statsRes] = await Promise.all([
+    fetch("/api/geo-stats"),
+    fetch("/api/stats"),
+  ])
+  if (!geoRes.ok || !statsRes.ok) return []
+  const [geo, stats] = await Promise.all([geoRes.json(), statsRes.json()])
+
+  const geoPatches = geo.patches as { id: string; centroid: { lat: number; lon: number } }[]
+  const comparison = (stats.pipeline?.geoComparison ?? []) as { patchId: string; actualSevere: number }[]
+  const byPatch = new Map(comparison.map((c: { patchId: string; actualSevere: number }) => [c.patchId, c.actualSevere]))
+
+  const pts = geoPatches.map(p => ({
+    lon: p.centroid.lon,
+    lat: p.centroid.lat,
+    weight: byPatch.get(p.id) ?? 0,
+  }))
+  return fitDamagePath(pts)
+}
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -177,14 +259,18 @@ function remapPointToCoordinates(
 function remapFeatureCollectionToCoordinates(
   data: GeoJSON.FeatureCollection,
   fromBounds: DatasetBounds,
-  toCoordinates: DatasetImageCoordinates
+  toCoordinates: DatasetImageCoordinates,
+  offset: { lng: number; lat: number } = { lng: 0, lat: 0 }
 ): GeoJSON.FeatureCollection {
   return {
     ...data,
     features: data.features.map((feature) => {
       if (feature.geometry.type !== "Polygon") return feature
       const coordinates = feature.geometry.coordinates.map((ring) =>
-        ring.map(([lng, lat]) => remapPointToCoordinates(lng, lat, fromBounds, toCoordinates))
+        ring.map(([lng, lat]) => {
+          const [mappedLng, mappedLat] = remapPointToCoordinates(lng, lat, fromBounds, toCoordinates)
+          return [mappedLng + offset.lng, mappedLat + offset.lat] as [number, number]
+        })
       )
       return { ...feature, geometry: { ...feature.geometry, coordinates } }
     }),
@@ -443,6 +529,13 @@ export default function MapView({
 
     joplinMarkerRef.current = marker
 
+    // Set initial visibility based on current zoom
+    const currentZoom = mapInstanceRef.current?.getZoom() ?? 0
+    if (currentZoom > JOPLIN_MARKER_MAX_ZOOM) {
+      el.style.opacity = "0"
+      el.style.pointerEvents = "none"
+    }
+
     el.addEventListener("click", () => {
       map.flyTo({ center: [centerLng, centerLat], zoom: 13, duration: 3000 })
       if (!markerFirstClickedRef.current) {
@@ -498,7 +591,14 @@ export default function MapView({
     map.on("move", () => {
       const c = map.getCenter()
       setCoordinates({ lat: c.lat, lng: c.lng })
-      setZoom(map.getZoom())
+      const z = map.getZoom()
+      setZoom(z)
+      const el = joplinMarkerRef.current?.getElement()
+      if (el) {
+        const hidden = z > JOPLIN_MARKER_MAX_ZOOM
+        el.style.opacity = hidden ? "0" : "1"
+        el.style.pointerEvents = hidden ? "none" : "auto"
+      }
     })
 
     mapInstanceRef.current = map
@@ -527,6 +627,9 @@ export default function MapView({
     const id = `pre-${patch.id}`
     if (!map.getSource(id)) {
       map.addSource(id, { type: "image", url: patch.pre, coordinates: getPreCoordinates(patch) })
+    } else {
+      const source = map.getSource(id) as maplibregl.ImageSource | undefined
+      source?.updateImage({ url: patch.pre, coordinates: getPreCoordinates(patch) })
     }
     if (!map.getLayer(id)) {
       map.addLayer(
@@ -543,6 +646,9 @@ export default function MapView({
     const id = `post-${patch.id}`
     if (!map.getSource(id)) {
       map.addSource(id, { type: "image", url: patch.post, coordinates: getPostCoordinates(patch) })
+    } else {
+      const source = map.getSource(id) as maplibregl.ImageSource | undefined
+      source?.updateImage({ url: patch.post, coordinates: getPostCoordinates(patch) })
     }
     if (!map.getLayer(id)) {
       map.addLayer(
@@ -604,7 +710,8 @@ export default function MapView({
           const transformed = remapFeatureCollectionToCoordinates(
             rawData,
             getOriginalPostBounds(patch),
-            getPostCoordinates(patch)
+            getPostCoordinates(patch),
+            BUILDING_ALIGNMENT_OFFSET
           )
           features.push(...transformed.features.map((feature) => ({
             ...feature,
@@ -655,17 +762,17 @@ export default function MapView({
       })
     }
     if (!map.getLayer(DATASET_OUTLINE_LAYER_ID)) {
-      map.addLayer({
-        id: DATASET_OUTLINE_LAYER_ID,
-        type: "line",
-        source: DATASET_OUTLINE_SOURCE_ID,
-        layout: { visibility: visible ? "visible" : "none" },
-        paint: {
-          "line-color": "#ef4444",
-          "line-width": 2,
-          "line-opacity": 0.45,
-        },
-      })
+        map.addLayer({
+          id: DATASET_OUTLINE_LAYER_ID,
+          type: "line",
+          source: DATASET_OUTLINE_SOURCE_ID,
+          layout: { visibility: visible ? "visible" : "none" },
+          paint: {
+            "line-color": "#ef4444",
+            "line-width": 2.75,
+            "line-opacity": 0.45,
+          },
+        })
     }
   }, [])
 
@@ -707,7 +814,8 @@ export default function MapView({
           const transformed = remapFeatureCollectionToCoordinates(
             rawData,
             getOriginalPostBounds(patch),
-            getPostCoordinates(patch)
+            getPostCoordinates(patch),
+            BUILDING_ALIGNMENT_OFFSET
           )
           features.push(...transformed.features.map((feature) => ({
             ...feature,
@@ -1021,6 +1129,46 @@ export default function MapView({
             map.fitBounds(toMlBounds(manifestRef.current.totalBounds), { padding: 50, maxZoom: 15, duration: 2000 })
           }
           break
+        case "show_damage_path":
+          if (!action.visible) {
+            for (const id of [DAMAGE_PATH_GLOW_ID, DAMAGE_PATH_LINE_ID]) {
+              if (map.getLayer(id)) map.removeLayer(id)
+            }
+            if (map.getSource(DAMAGE_PATH_SOURCE_ID)) map.removeSource(DAMAGE_PATH_SOURCE_ID)
+          } else {
+            fetchAndFitDamagePath().then(coords => {
+              if (!coords.length) return
+              const m = mapInstanceRef.current
+              if (!m) return
+              // Remove stale layers if a previous call already added them
+              for (const id of [DAMAGE_PATH_GLOW_ID, DAMAGE_PATH_LINE_ID]) {
+                if (m.getLayer(id)) m.removeLayer(id)
+              }
+              if (m.getSource(DAMAGE_PATH_SOURCE_ID)) m.removeSource(DAMAGE_PATH_SOURCE_ID)
+              m.addSource(DAMAGE_PATH_SOURCE_ID, {
+                type: "geojson",
+                data: { type: "Feature", geometry: { type: "LineString", coordinates: coords }, properties: {} },
+              })
+              m.addLayer({
+                id: DAMAGE_PATH_GLOW_ID,
+                type: "line",
+                source: DAMAGE_PATH_SOURCE_ID,
+                paint: { "line-color": "#34d399", "line-width": 14, "line-opacity": 0.15, "line-blur": 8 },
+              })
+              m.addLayer({
+                id: DAMAGE_PATH_LINE_ID,
+                type: "line",
+                source: DAMAGE_PATH_SOURCE_ID,
+                paint: {
+                  "line-color": "#34d399",
+                  "line-width": 3,
+                  "line-opacity": 0.9,
+                  "line-dasharray": [8, 4],
+                },
+              })
+            }).catch(() => {})
+          }
+          break
       }
     }
     return () => { if (mapActionRef) mapActionRef.current = null }
@@ -1200,6 +1348,7 @@ export default function MapView({
                           />
                         </div>
                       )}
+
                     </div>
                   </>
                 )}

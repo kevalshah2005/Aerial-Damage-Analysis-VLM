@@ -82,10 +82,11 @@ Map control rules:
 - Use fly_to for cities or specific points. Use fit_bounds for regions, states, or countries.
 - For set_zoom: zoomed-out overview = 3-5, country = 5-7, state = 6-8, city = 10-12, neighborhood = 13-15.
 - For set_base_layer: use "satellite" for imagery, "terrain" for topography, "dark" for a minimal dark style.
-- For toggle_layer / set_layer_opacity / fit_to_dataset: only use when the user's question implies a dataset is loaded.
+- For toggle_layer / set_layer_opacity / fit_to_dataset: only use when the user's question implies a dataset is loaded. Use layer="buildings" for ground-truth (human-annotated) damage, layer="predicted" for model-predicted damage.
 - For place_marker: use when the user asks to mark, pin, or highlight a specific location.
 - For clear_markers: use when the user asks to remove or clear pins/markers.
-- For query_dataset: use when the user asks about specific patches, wants to know which areas were hardest hit, asks for rankings/breakdowns beyond the summary already in context, or wants geographic details. Results include a data_source field ("predicted" or "true-labels") — always mention which label source you used.
+- For show_damage_path: show or hide the polynomial curve-of-best-fit representing the estimated tornado damage path. Use when the user asks to show, visualize, or hide the tornado track, damage path, or curve of best fit.
+- For query_dataset: use when the user asks about specific patches, wants to know which areas were hardest hit, asks for rankings/breakdowns beyond the summary already in context, or wants geographic details. All results are from model predictions — always make clear you are reporting predicted damage, not ground truth.
 - For web_search: use when the question requires current information, external sources, or general knowledge not covered by the local dataset context. Always cite the sources you used.
 
 Behavior rules:
@@ -138,9 +139,9 @@ Provide clear, technically accurate responses in readable paragraphs. Keep respo
           execute: async (): Promise<{ ok: true }> => ({ ok: true }),
         }),
         toggle_layer: tool({
-          description: "Show or hide a dataset overlay layer. Only use when a dataset is loaded. pre = pre-disaster imagery, post = post-disaster imagery, buildings = building damage polygons.",
+          description: "Show or hide a dataset overlay layer. Only use when a dataset is loaded. pre = pre-disaster imagery, post = post-disaster imagery, buildings = ground-truth building damage polygons (human-annotated), predicted = model-predicted building damage polygons.",
           inputSchema: z.object({
-            layer: z.enum(["pre", "post", "buildings"]),
+            layer: z.enum(["pre", "post", "buildings", "predicted"]),
             visible: z.boolean().optional().describe("true to show, false to hide. Omit to toggle current state."),
           }),
           execute: async (): Promise<{ ok: true }> => ({ ok: true }),
@@ -148,7 +149,7 @@ Provide clear, technically accurate responses in readable paragraphs. Keep respo
         set_layer_opacity: tool({
           description: "Set the opacity of a dataset overlay layer (0 = invisible, 1 = fully opaque). Only use when a dataset is loaded.",
           inputSchema: z.object({
-            layer: z.enum(["pre", "post", "buildings"]),
+            layer: z.enum(["pre", "post", "buildings", "predicted"]),
             opacity: z.number().min(0).max(1).describe("Opacity from 0.0 (invisible) to 1.0 (fully opaque)"),
           }),
           execute: async (): Promise<{ ok: true }> => ({ ok: true }),
@@ -172,6 +173,13 @@ Provide clear, technically accurate responses in readable paragraphs. Keep respo
           inputSchema: z.object({}),
           execute: async (): Promise<{ ok: true }> => ({ ok: true }),
         }),
+        show_damage_path: tool({
+          description: "Show or hide a polynomial curve-of-best-fit representing the estimated tornado damage path, fitted to the spatial distribution of severe building damage across the dataset. Use when the user asks to show/hide the tornado track, damage path, or curve of best fit.",
+          inputSchema: z.object({
+            visible: z.boolean().describe("true to show the damage path curve, false to hide it"),
+          }),
+          execute: async (): Promise<{ ok: true }> => ({ ok: true }),
+        }),
         query_dataset: tool({
           description: "Query the local Joplin damage dataset for specific patch-level information. Use when the user asks about specific areas, top damaged patches, geographic breakdown, or wants data beyond the summary already provided.",
           inputSchema: z.object({
@@ -188,11 +196,9 @@ Provide clear, technically accurate responses in readable paragraphs. Keep respo
           }),
           execute: async ({ query_type, damage_type, patch_id, limit, lat_min, lat_max, lng_min, lng_max }) => {
             try {
-              const predictedPath = path.join(process.cwd(), "content", "chat-context", "predicted_patch_summaries.json")
-              const truePath = path.join(process.cwd(), "content", "chat-context", "patch_summaries.json")
-              const summariesPath = fs.existsSync(predictedPath) ? predictedPath : truePath
-              const dataSource = fs.existsSync(predictedPath) ? "predicted" : "true-labels"
-              if (!fs.existsSync(summariesPath)) return { error: "Patch summaries not available." }
+              const summariesPath = path.join(process.cwd(), "content", "chat-context", "predicted_patch_summaries.json")
+              const dataSource = "predicted"
+              if (!fs.existsSync(summariesPath)) return { error: "Predicted patch summaries not available. Run the pipeline to generate predictions." }
               type Patch = { id: string; bounds: [[number,number],[number,number]]; buildingCount: number; damage: Record<string, number> }
               const patches: Patch[] = JSON.parse(fs.readFileSync(summariesPath, "utf-8"))
 

@@ -133,8 +133,16 @@ export async function GET() {
     bins[bin].buildings += p.buildingCount
   })
 
+  const manifestPatchMap = new Map(
+    (manifest.patches as ManifestPatch[]).map((p) => [p.id, p])
+  )
+
   return NextResponse.json({
-    patches: patches.map((p, i) => ({ ...p, projection: projections[i] })),
+    patches: patches.map((p, i) => ({
+      ...p,
+      projection: projections[i],
+      post: manifestPatchMap.get(p.id)?.post ?? null,
+    })),
     corridor: {
       center: corridorCenter,
       corners,

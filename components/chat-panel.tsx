@@ -140,6 +140,14 @@ export default function ChatPanel({
   const isStreaming = status === "streaming"
   const executedToolCallIds = useRef<Set<string>>(new Set())
 
+  const resetConversationView = useCallback(() => {
+    onConversationChange?.()
+    executedToolCallIds.current = new Set()
+    setEditingConversationId(null)
+    setEditingTitle("")
+    setMessages([])
+  }, [onConversationChange, setMessages])
+
   // Execute map actions from tool invocations in completed assistant messages
   const onMapActionRef = useRef(onMapAction)
   useEffect(() => { onMapActionRef.current = onMapAction }, [onMapAction])
@@ -167,6 +175,7 @@ export default function ChatPanel({
         else if (toolName === "place_marker") action = { type: "place_marker", ...args } as MapAction
         else if (toolName === "clear_markers") action = { type: "clear_markers" }
         else if (toolName === "fit_to_dataset") action = { type: "fit_to_dataset" }
+        else if (toolName === "show_damage_path") action = { type: "show_damage_path", ...args } as MapAction
 
         if (action) onMapActionRef.current(action)
       }
@@ -183,29 +192,16 @@ export default function ChatPanel({
       try {
         const loaded = await loadConversations()
         if (cancelled) return
-        if (loaded.length === 0) {
-          const created = await createConversation()
-          if (cancelled) return
-          setConversations([created])
-          setActiveConversationId(created.conversationId)
-        } else {
-          setActiveConversationId(loaded[0].conversationId)
-        }
+        // Start with no active conversation — a new one is created lazily on first send.
+        setConversations(loaded)
       } catch {
-        if (!cancelled) {
-          setConversations([])
-        }
+        if (!cancelled) setConversations([])
       } finally {
-        if (!cancelled) {
-          setLoadingConversations(false)
-        }
+        if (!cancelled) setLoadingConversations(false)
       }
     })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [createConversation, loadConversations])
+    return () => { cancelled = true }
+  }, [loadConversations])
 
   useEffect(() => {
     if (!activeConversationId) return
@@ -230,22 +226,39 @@ export default function ChatPanel({
               input: tc.input,
               output: { ok: true },
             }))
+            const textPart = { type: "text" as const, text: message.content }
+            // Assistant messages with tool calls need a step-start separator between
+            // the tool call block and the text block. Without it, convertToModelMessages
+            // merges them into one assistant message, producing consecutive user turns
+            // (tool-result immediately followed by next user message) that Bedrock rejects.
+            const parts =
+              message.role === "assistant" && toolParts.length > 0
+                ? [
+                    ...toolParts,
+                    { type: "step-start" } as unknown as typeof textPart,
+                    textPart,
+                  ]
+                : [textPart]
             return {
               id: message.messageId,
               role: message.role,
-              parts: [...toolParts, { type: "text" as const, text: message.content }],
+              parts,
             }
           }
         )
         if (!cancelled) {
-          // Pre-suppress session-only tool calls so they don't re-fire on load
-          const SESSION_ONLY_TOOLS = new Set(["place_marker", "clear_markers"])
+          executedToolCallIds.current = new Set()
+          // Historical tool calls should remain visible in chat, but must not
+          // mutate the live map when an old conversation is opened.
+          // Session-only tools produce ephemeral map state that doesn't survive reload.
+          const SESSION_ONLY_TOOLS = new Set(["place_marker", "clear_markers", "show_damage_path"])
           for (const msg of initialMessages) {
             for (const part of msg.parts ?? []) {
-              if (typeof (part as { type?: string }).type === "string" && (part as { type: string }).type.startsWith("tool-")) {
-                const toolName = (part as { type: string }).type.slice(5)
+              const typedPart = part as { type?: string; toolCallId?: string }
+              if (typeof typedPart.type === "string" && typedPart.type.startsWith("tool-")) {
+                const toolName = typedPart.type.slice(5)
                 if (SESSION_ONLY_TOOLS.has(toolName)) {
-                  executedToolCallIds.current.add((part as { toolCallId: string }).toolCallId)
+                  executedToolCallIds.current.add(typedPart.toolCallId!)
                 }
               }
             }
@@ -272,41 +285,43 @@ export default function ChatPanel({
     requestAnimationFrame(() => requestAnimationFrame(scrollToBottom))
   }, [activeConversationId, loadingMessages, scrollToBottom])
 
+  const ensureConversation = async (): Promise<string | null> => {
+    if (activeConversationId) return activeConversationId
+    try {
+      const created = await createConversation()
+      setConversations(prev => [created, ...prev])
+      setActiveConversationId(created.conversationId)
+      return created.conversationId
+    } catch {
+      return null
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isStreaming || !activeConversationId) return
+    if (!input.trim() || isStreaming) return
+    const convId = await ensureConversation()
+    if (!convId) return
     const text = input
     setInput("")
     const headers = await getAuthHeader()
-    await sendMessage(
-      { text },
-      {
-        headers,
-        body: { conversationId: activeConversationId },
-      }
-    )
+    await sendMessage({ text }, { headers, body: { conversationId: convId } })
   }
 
   const handleSuggestion = async (text: string) => {
-    if (!activeConversationId || isStreaming) return
+    if (isStreaming) return
+    const convId = await ensureConversation()
+    if (!convId) return
     const headers = await getAuthHeader()
-    await sendMessage(
-      { text },
-      {
-        headers,
-        body: { conversationId: activeConversationId },
-      }
-    )
+    await sendMessage({ text }, { headers, body: { conversationId: convId } })
   }
 
   const handleNewChat = async () => {
     if (isStreaming) return
-    onConversationChange?.()
-    executedToolCallIds.current = new Set()
+    resetConversationView()
     const created = await createConversation()
     setConversations((prev) => [created, ...prev])
     setActiveConversationId(created.conversationId)
-    setMessages([])
   }
 
   const handleDeleteConversation = async (conversationId: string) => {
@@ -329,18 +344,15 @@ export default function ChatPanel({
     setConversations(remaining)
 
     if (remaining.length === 0) {
-      onConversationChange?.()
-      executedToolCallIds.current = new Set()
+      resetConversationView()
       const created = await createConversation()
       setConversations([created])
       setActiveConversationId(created.conversationId)
-      setMessages([])
       return
     }
 
     if (activeConversationId === conversationId) {
-      onConversationChange?.()
-      executedToolCallIds.current = new Set()
+      resetConversationView()
       setActiveConversationId(remaining[0].conversationId)
     }
   }
@@ -434,8 +446,7 @@ export default function ChatPanel({
                   <button
                     onClick={() => {
                       if (conversation.conversationId === activeConversationId) return
-                      onConversationChange?.()
-                      executedToolCallIds.current = new Set()
+                      resetConversationView()
                       setActiveConversationId(conversation.conversationId)
                     }}
                     className="w-full text-left truncate"
@@ -540,7 +551,7 @@ export default function ChatPanel({
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isStreaming || !activeConversationId}
+            disabled={!input.trim() || isStreaming}
             className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg"
             aria-label="Send message"
           >
@@ -562,8 +573,9 @@ const TOOL_META: Record<string, { label: string; icon: string }> = {
   set_base_layer:  { label: "Switching map style",  icon: "🗺" },
   toggle_layer:    { label: "Toggling layer",        icon: "👁" },
   set_layer_opacity: { label: "Adjusting opacity",  icon: "🎨" },
-  place_marker:    { label: "Placing marker",        icon: "📍" },
-  clear_markers:   { label: "Clearing markers",      icon: "🗑" },
+  place_marker:      { label: "Placing marker",           icon: "📍" },
+  clear_markers:     { label: "Clearing markers",         icon: "🗑" },
+  show_damage_path:  { label: "Rendering damage path",    icon: "〰️" },
   fit_to_dataset:  { label: "Zooming to dataset",    icon: "📡" },
   query_dataset:   { label: "Querying dataset",      icon: "📊" },
   web_search:      { label: "Searching the web",     icon: "🌐" },
@@ -673,13 +685,13 @@ function MessageBubble({ message }: { message: UIMessage }) {
                 strong: ({ children }) => (
                   <strong className="font-semibold">{children}</strong>
                 ),
-                code: ({ inline, children }) =>
-                  inline ? (
-                    <code className="px-1 py-0.5 rounded bg-muted text-[11px]">
+                code: ({ className, children }) =>
+                  className ? (
+                    <code className="block p-2 rounded bg-muted text-[11px] overflow-x-auto">
                       {children}
                     </code>
                   ) : (
-                    <code className="block p-2 rounded bg-muted text-[11px] overflow-x-auto">
+                    <code className="px-1 py-0.5 rounded bg-muted text-[11px]">
                       {children}
                     </code>
                   ),
