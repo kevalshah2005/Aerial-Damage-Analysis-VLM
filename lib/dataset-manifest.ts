@@ -37,6 +37,18 @@ const RIGHT_STRIP_SEAM_TILE_IDS = new Set([
 ])
 const RIGHT_STRIP_MIN_COLUMN = 5
 const RIGHT_STRIP_MAX_OFFSET_DELTA = 0.18
+/** Fraction [0,1) to move the west edge of the quad eastward for outline-only geometry (seam tiles). */
+const OUTLINE_SEAM_CLIP_FRACTION = 0.5
+
+/** Outline-only: shrink from outer edges toward interior (fraction of edge length). Tuned for masked / seam tiles. */
+type OutlineEdgeTrim = { north?: number; south?: number; west?: number; east?: number }
+
+const OUTLINE_PATCH_EDGE_TRIM: Record<string, OutlineEdgeTrim> = {
+  "00000105": { north: 0.38, west: 0.22 },
+  "00000091": { north: 0.34, west: 0.4 },
+  "00000013": { south: 0.38, east: 0.2 },
+  "00000051": { south: 0.34, west: 0.35, east: 0.18 },
+}
 const configuredOverlayOffsetLat = Number.parseFloat(process.env.DATASET_OVERLAY_OFFSET_LAT ?? "-0.00010")
 const configuredOverlayOffsetLng = Number.parseFloat(process.env.DATASET_OVERLAY_OFFSET_LNG ?? "0.00002")
 const DEFAULT_OVERLAY_OFFSET_LAT = Number.isFinite(configuredOverlayOffsetLat) ? configuredOverlayOffsetLat : -0.00010
@@ -120,6 +132,82 @@ function translateCoordinates(
   offsetLat: number
 ): DatasetImageCoordinates {
   return coordinates.map(([lng, lat]) => [lng + offsetLng, lat + offsetLat]) as DatasetImageCoordinates
+}
+
+function outlineLerp(
+  a: [number, number],
+  b: [number, number],
+  frac: number
+): [number, number] {
+  return [a[0] + frac * (b[0] - a[0]), a[1] + frac * (b[1] - a[1])]
+}
+
+function clampOutlineTrim(t: number): number {
+  return Math.max(0, Math.min(0.92, t))
+}
+
+/** Outline-only: move west edge east (NW→NE, SW→SE). */
+function clipOutlineQuadWest(
+  coordinates: DatasetImageCoordinates,
+  t: number
+): DatasetImageCoordinates {
+  const [nw, ne, se, sw] = coordinates
+  const frac = clampOutlineTrim(t)
+  return [outlineLerp(nw, ne, frac), ne, se, outlineLerp(sw, se, frac)]
+}
+
+/** Outline-only: move north edge south (NW→SW, NE→SE). */
+function clipOutlineQuadNorth(
+  coordinates: DatasetImageCoordinates,
+  t: number
+): DatasetImageCoordinates {
+  const [nw, ne, se, sw] = coordinates
+  const frac = clampOutlineTrim(t)
+  return [outlineLerp(nw, sw, frac), outlineLerp(ne, se, frac), se, sw]
+}
+
+/** Outline-only: move south edge north (SW→NW, SE→NE). */
+function clipOutlineQuadSouth(
+  coordinates: DatasetImageCoordinates,
+  t: number
+): DatasetImageCoordinates {
+  const [nw, ne, se, sw] = coordinates
+  const frac = clampOutlineTrim(t)
+  return [nw, ne, outlineLerp(se, ne, frac), outlineLerp(sw, nw, frac)]
+}
+
+/** Outline-only: move east edge west (NE→NW, SE→SW). */
+function clipOutlineQuadEast(
+  coordinates: DatasetImageCoordinates,
+  t: number
+): DatasetImageCoordinates {
+  const [nw, ne, se, sw] = coordinates
+  const frac = clampOutlineTrim(t)
+  return [nw, outlineLerp(ne, nw, frac), outlineLerp(se, sw, frac), sw]
+}
+
+function applyOutlineEdgeTrims(
+  coordinates: DatasetImageCoordinates,
+  trim: OutlineEdgeTrim
+): DatasetImageCoordinates {
+  let c = coordinates
+  if (trim.north != null && trim.north > 0) c = clipOutlineQuadNorth(c, trim.north)
+  if (trim.south != null && trim.south > 0) c = clipOutlineQuadSouth(c, trim.south)
+  if (trim.west != null && trim.west > 0) c = clipOutlineQuadWest(c, trim.west)
+  if (trim.east != null && trim.east > 0) c = clipOutlineQuadEast(c, trim.east)
+  return c
+}
+
+function computeOutlineDisplayCoordinates(
+  patchId: string,
+  translatedDisplayCoordinates: DatasetImageCoordinates
+): DatasetImageCoordinates | undefined {
+  const trim = OUTLINE_PATCH_EDGE_TRIM[patchId]
+  if (trim) return applyOutlineEdgeTrims(translatedDisplayCoordinates, trim)
+  if (RIGHT_STRIP_SEAM_TILE_IDS.has(patchId)) {
+    return clipOutlineQuadWest(translatedDisplayCoordinates, OUTLINE_SEAM_CLIP_FRACTION)
+  }
+  return undefined
 }
 
 function boundsToImageCoordinates(bounds: DatasetBounds): DatasetImageCoordinates {
@@ -373,6 +461,11 @@ export function loadAugmentedManifest(
     const translatedPreCoordinates = translateCoordinates(preCoordinates, offsetLng, offsetLat)
     const translatedPostCoordinates = translateCoordinates(postCoordinates, offsetLng, offsetLat)
 
+    const outlineDisplayCoordinates = computeOutlineDisplayCoordinates(
+      patch.id,
+      translatedDisplayCoordinates
+    )
+
     return {
       ...patch,
       snappedPreBounds: imageCoordinatesToBounds(translatedPreCoordinates),
@@ -381,6 +474,7 @@ export function loadAugmentedManifest(
       snappedPreCoordinates: translatedPreCoordinates,
       snappedPostCoordinates: translatedPostCoordinates,
       snappedDisplayCoordinates: translatedDisplayCoordinates,
+      ...(outlineDisplayCoordinates ? { outlineDisplayCoordinates } : {}),
     }
   })
   const snappedTotalBounds = snappedPatches.reduce<DatasetBounds | null>((acc, patch) => {

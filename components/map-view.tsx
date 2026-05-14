@@ -54,8 +54,25 @@ const PREDICTED_SOURCE_ID = "buildings-predicted"
 const PREDICTED_FILL_LAYER_ID = "buildings-predicted-fill"
 const PREDICTED_LINE_LAYER_ID = "buildings-predicted-line"
 const DATASET_OUTLINE_SOURCE_ID = "dataset-outline"
+const DATASET_OUTLINE_GLOW_LAYER_ID = "dataset-outline-glow"
 const DATASET_OUTLINE_LAYER_ID = "dataset-outline-line"
-const OUTLINE_GRID_SUBDIVISIONS = 24
+const OUTLINE_GRID_SUBDIVISIONS = 96
+
+/** Screen pixels — constant width at every zoom (MapLibre default). */
+const OUTLINE_LINE_WIDTH_PX = 2.25
+const OUTLINE_GLOW_WIDTH_PX = 7.5
+const OUTLINE_GLOW_BLUR_PX = 2.75
+const OUTLINE_GLOW_OPACITY = 0.28
+
+/** Hide dataset perimeter when zoomed out to here or farther (inclusive). Visible only when zoom > this value. */
+const DATASET_OUTLINE_MIN_ZOOM_EXCLUSIVE = 8
+
+type OutlineFootprint = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
 
 const JOPLIN_LNG = -94.5133
 const JOPLIN_LAT = 37.0842
@@ -197,6 +214,13 @@ function getPostCoordinates(patch: DatasetPatch): DatasetImageCoordinates {
   return patch.snappedPostCoordinates ?? toImageCoords(getPostBounds(patch))
 }
 
+/** Quad for dataset perimeter outline only; imagery still uses getDisplayCoordinates. */
+function getOutlineCoordinates(patch: DatasetPatch, footprint?: OutlineFootprint): DatasetImageCoordinates {
+  const coordinates = getDisplayCoordinates(patch)
+  if (footprint) return cropImageCoordinates(coordinates, footprint)
+  return patch.outlineDisplayCoordinates ?? coordinates
+}
+
 function getOriginalPostBounds(patch: DatasetPatch): DatasetBounds {
   return patch.postBounds ?? patch.displayBounds ?? patch.bounds
 }
@@ -286,12 +310,112 @@ function coordinateBounds(coordinates: DatasetImageCoordinates): DatasetBounds {
   ]
 }
 
+function lerpPoint(
+  a: [number, number],
+  b: [number, number],
+  t: number
+): [number, number] {
+  return [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]
+}
+
+function pointAtImageFraction(
+  coordinates: DatasetImageCoordinates,
+  u: number,
+  v: number
+): [number, number] {
+  const [nw, ne, se, sw] = coordinates
+  return lerpPoint(lerpPoint(nw, ne, u), lerpPoint(sw, se, u), v)
+}
+
+function cropImageCoordinates(
+  coordinates: DatasetImageCoordinates,
+  footprint: OutlineFootprint
+): DatasetImageCoordinates {
+  const left = Math.max(0, Math.min(1, footprint.left))
+  const right = Math.max(left, Math.min(1, footprint.right))
+  const top = Math.max(0, Math.min(1, footprint.top))
+  const bottom = Math.max(top, Math.min(1, footprint.bottom))
+  return [
+    pointAtImageFraction(coordinates, left, top),
+    pointAtImageFraction(coordinates, right, top),
+    pointAtImageFraction(coordinates, right, bottom),
+    pointAtImageFraction(coordinates, left, bottom),
+  ]
+}
+
+/** Convex quad in (u,v): NW, NE, SE, SW — same order as DatasetImageCoordinates. */
+function pointInConvexQuad(uv: [number, number], quad: [number, number][]): boolean {
+  if (quad.length !== 4) return false
+  let sign = 0
+  for (let i = 0; i < 4; i++) {
+    const o = quad[i]!
+    const a = quad[(i + 1) % 4]!
+    const c =
+      (a[0] - o[0]) * (uv[1] - o[1]) -
+      (a[1] - o[1]) * (uv[0] - o[0])
+    if (Math.abs(c) < 1e-10) continue
+    const s = c > 0 ? 1 : -1
+    if (sign === 0) sign = s
+    else if (s !== sign) return false
+  }
+  return true
+}
+
+function stitchSegmentsIntoLineStrings(
+  segments: [[number, number], [number, number]][]
+): [number, number][][] {
+  const keyOf = ([lng, lat]: [number, number]) => `${lng}:${lat}`
+  const outgoing = new Map<string, [[number, number], string][]>()
+  const unused = new Set<string>()
+
+  for (const [start, end] of segments) {
+    const startKey = keyOf(start)
+    const endKey = keyOf(end)
+    const edgeKey = `${startKey}>${endKey}`
+    unused.add(edgeKey)
+    const edges = outgoing.get(startKey) ?? []
+    edges.push([end, edgeKey])
+    outgoing.set(startKey, edges)
+  }
+
+  const rings: [number, number][][] = []
+
+  for (const [start, end] of segments) {
+    const startKey = keyOf(start)
+    const firstEdgeKey = `${startKey}>${keyOf(end)}`
+    if (!unused.has(firstEdgeKey)) continue
+
+    const ring: [number, number][] = [start]
+    let current = start
+    let currentKey = startKey
+
+    while (true) {
+      const candidates = outgoing.get(currentKey) ?? []
+      const next = candidates.find(([, edgeKey]) => unused.has(edgeKey))
+      if (!next) break
+
+      const [nextPoint, edgeKey] = next
+      unused.delete(edgeKey)
+      ring.push(nextPoint)
+      current = nextPoint
+      currentKey = keyOf(current)
+
+      if (currentKey === startKey) break
+    }
+
+    if (ring.length > 1) rings.push(ring)
+  }
+
+  return rings
+}
+
 // Compute a non-convex outer perimeter for the dataset by rasterizing the tile
 // collection in normalized tile space, then extracting the boundary of the
-// occupied cells. This preserves the collection shape while absorbing the
-// slight overlaps between neighboring tiles.
+// occupied cells. Boundary edges are stitched into continuous rings; tiny
+// disconnected two-point segments disappear when zoomed out.
 function buildDatasetOutlineFeatureCollection(
-  patches: DatasetPatch[]
+  patches: DatasetPatch[],
+  footprints: Record<string, OutlineFootprint> = {}
 ): GeoJSON.FeatureCollection {
   if (!patches.length) {
     return { type: "FeatureCollection", features: [] }
@@ -331,7 +455,7 @@ function buildDatasetOutlineFeatureCollection(
   const cellKey = (x: number, y: number) => `${x}:${y}`
 
   for (const patch of patches) {
-    const projected = getDisplayCoordinates(patch).map(project)
+    const projected = getOutlineCoordinates(patch, footprints[patch.id]).map(project) as [number, number][]
     const us = projected.map(([u]) => u)
     const vs = projected.map(([, v]) => v)
     const minX = Math.floor(Math.min(...us) * scale)
@@ -341,7 +465,11 @@ function buildDatasetOutlineFeatureCollection(
 
     for (let x = minX; x < maxX; x++) {
       for (let y = minY; y < maxY; y++) {
-        occupied.add(cellKey(x, y))
+        const cx = (x + 0.5) / scale
+        const cy = (y + 0.5) / scale
+        if (pointInConvexQuad([cx, cy], projected)) {
+          occupied.add(cellKey(x, y))
+        }
       }
     }
   }
@@ -349,29 +477,90 @@ function buildDatasetOutlineFeatureCollection(
   const hasCell = (x: number, y: number) => occupied.has(cellKey(x, y))
   const segments: [ [number, number], [number, number] ][] = []
 
+  const roundLngLat = (p: [number, number]): [number, number] => [
+    Math.round(p[0] * 1e6) / 1e6,
+    Math.round(p[1] * 1e6) / 1e6,
+  ]
+
   for (const key of occupied) {
     const [xStr, yStr] = key.split(":")
     const x = Number.parseInt(xStr, 10)
     const y = Number.parseInt(yStr, 10)
 
-    if (!hasCell(x, y - 1)) segments.push([unproject(x / scale, y / scale), unproject((x + 1) / scale, y / scale)])
-    if (!hasCell(x + 1, y)) segments.push([unproject((x + 1) / scale, y / scale), unproject((x + 1) / scale, (y + 1) / scale)])
-    if (!hasCell(x, y + 1)) segments.push([unproject((x + 1) / scale, (y + 1) / scale), unproject(x / scale, (y + 1) / scale)])
-    if (!hasCell(x - 1, y)) segments.push([unproject(x / scale, (y + 1) / scale), unproject(x / scale, y / scale)])
+    const seg = (a: [number, number], b: [number, number]) =>
+      [roundLngLat(a), roundLngLat(b)] as [[number, number], [number, number]]
+
+    if (!hasCell(x, y - 1)) segments.push(seg(unproject(x / scale, y / scale), unproject((x + 1) / scale, y / scale)))
+    if (!hasCell(x + 1, y)) segments.push(seg(unproject((x + 1) / scale, y / scale), unproject((x + 1) / scale, (y + 1) / scale)))
+    if (!hasCell(x, y + 1)) segments.push(seg(unproject((x + 1) / scale, (y + 1) / scale), unproject(x / scale, (y + 1) / scale)))
+    if (!hasCell(x - 1, y)) segments.push(seg(unproject(x / scale, (y + 1) / scale), unproject(x / scale, y / scale)))
   }
+
+  const rings = stitchSegmentsIntoLineStrings(segments)
 
   return {
     type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "MultiLineString",
-          coordinates: segments,
-        },
-      },
-    ],
+    features: rings.length > 0
+      ? [
+          {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "MultiLineString",
+              coordinates: rings,
+            },
+          },
+        ]
+      : [],
+  }
+}
+
+async function loadImageFootprint(url: string): Promise<OutlineFootprint | null> {
+  const response = await fetch(url, { cache: "force-cache" })
+  if (!response.ok) return null
+
+  const bitmap = await createImageBitmap(await response.blob())
+  const canvas = document.createElement("canvas")
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })
+  if (!ctx) return null
+
+  ctx.drawImage(bitmap, 0, 0)
+  bitmap.close()
+
+  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  let minX = width
+  let minY = height
+  let maxX = -1
+  let maxY = -1
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4
+      const visible = data[i + 3] > 8 && (data[i] > 5 || data[i + 1] > 5 || data[i + 2] > 5)
+      if (!visible) continue
+      minX = Math.min(minX, x)
+      maxX = Math.max(maxX, x)
+      minY = Math.min(minY, y)
+      maxY = Math.max(maxY, y)
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return null
+
+  return {
+    left: minX / width,
+    right: (maxX + 1) / width,
+    top: minY / height,
+    bottom: (maxY + 1) / height,
+  }
+}
+
+function bringDatasetOutlineToFront(map: MapLibreMap) {
+  const ids = [DATASET_OUTLINE_GLOW_LAYER_ID, DATASET_OUTLINE_LAYER_ID]
+  for (const id of ids) {
+    if (map.getLayer(id)) map.moveLayer(id)
   }
 }
 
@@ -428,6 +617,8 @@ export default function MapView({
   const loadedPredictedRef = useRef<Set<string>>(new Set())
   const buildingCacheRef = useRef<Record<string, GeoJSON.FeatureCollection>>({})
   const predictedCacheRef = useRef<Record<string, GeoJSON.FeatureCollection>>({})
+  const outlineFootprintCacheRef = useRef<Record<string, OutlineFootprint>>({})
+  const updateDatasetOutlineVisibilityRef = useRef<(map: MapLibreMap) => void>(() => {})
   const preloadGenerationRef = useRef(0)
   const buildingLoadGenerationRef = useRef(0)
   const predictedLoadGenerationRef = useRef(0)
@@ -599,6 +790,7 @@ export default function MapView({
         el.style.opacity = hidden ? "0" : "1"
         el.style.pointerEvents = hidden ? "none" : "auto"
       }
+      updateDatasetOutlineVisibilityRef.current(map)
     })
 
     mapInstanceRef.current = map
@@ -639,6 +831,8 @@ export default function MapView({
     } else {
       map.setPaintProperty(id, "raster-opacity", opacity)
     }
+    bringDatasetOutlineToFront(map)
+    updateDatasetOutlineVisibilityRef.current(map)
     loadedPreRef.current.add(patch.id)
   }, [])
 
@@ -658,6 +852,8 @@ export default function MapView({
     } else {
       map.setPaintProperty(id, "raster-opacity", opacity)
     }
+    bringDatasetOutlineToFront(map)
+    updateDatasetOutlineVisibilityRef.current(map)
     loadedPostRef.current.add(patch.id)
   }, [])
 
@@ -754,33 +950,66 @@ export default function MapView({
     attachBuildingInteractions(map)
   }, [attachBuildingInteractions])
 
-  const ensureDatasetOutlineLayer = useCallback((map: MapLibreMap, visible: boolean) => {
+  const ensureDatasetOutlineLayer = useCallback((map: MapLibreMap) => {
     if (!map.getSource(DATASET_OUTLINE_SOURCE_ID)) {
       map.addSource(DATASET_OUTLINE_SOURCE_ID, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
       })
     }
+    if (!map.getLayer(DATASET_OUTLINE_GLOW_LAYER_ID)) {
+      map.addLayer({
+        id: DATASET_OUTLINE_GLOW_LAYER_ID,
+        type: "line",
+        source: DATASET_OUTLINE_SOURCE_ID,
+        layout: {
+          visibility: "none",
+          "line-cap": "round",
+          "line-join": "round",
+        },
+        paint: {
+          "line-color": "#ef4444",
+          "line-width": OUTLINE_GLOW_WIDTH_PX,
+          "line-opacity": OUTLINE_GLOW_OPACITY,
+          "line-blur": OUTLINE_GLOW_BLUR_PX,
+        },
+      })
+    }
     if (!map.getLayer(DATASET_OUTLINE_LAYER_ID)) {
-        map.addLayer({
-          id: DATASET_OUTLINE_LAYER_ID,
-          type: "line",
-          source: DATASET_OUTLINE_SOURCE_ID,
-          layout: { visibility: visible ? "visible" : "none" },
-          paint: {
-            "line-color": "#ef4444",
-            "line-width": 2.75,
-            "line-opacity": 0.45,
-          },
-        })
+      map.addLayer({
+        id: DATASET_OUTLINE_LAYER_ID,
+        type: "line",
+        source: DATASET_OUTLINE_SOURCE_ID,
+        layout: {
+          visibility: "none",
+          "line-cap": "round",
+          "line-join": "round",
+        },
+        paint: {
+          "line-color": "#ef4444",
+          "line-width": OUTLINE_LINE_WIDTH_PX,
+          "line-opacity": 0.94,
+        },
+      })
+    }
+    bringDatasetOutlineToFront(map)
+  }, [])
+
+  const updateDatasetOutlineVisibility = useCallback((map: MapLibreMap) => {
+    const s = layerStateRef.current
+    const wantOutline =
+      s.preVisible ||
+      s.postVisible ||
+      s.buildingsVisible ||
+      s.predictedVisible
+    const zoomOk = map.getZoom() > DATASET_OUTLINE_MIN_ZOOM_EXCLUSIVE
+    const vis = wantOutline && zoomOk ? "visible" : "none"
+    for (const id of [DATASET_OUTLINE_GLOW_LAYER_ID, DATASET_OUTLINE_LAYER_ID]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", vis)
     }
   }, [])
 
-  const setDatasetOutlineVisibility = useCallback((map: MapLibreMap, visible: boolean) => {
-    if (map.getLayer(DATASET_OUTLINE_LAYER_ID)) {
-      map.setLayoutProperty(DATASET_OUTLINE_LAYER_ID, "visibility", visible ? "visible" : "none")
-    }
-  }, [])
+  updateDatasetOutlineVisibilityRef.current = updateDatasetOutlineVisibility
 
   const setBuildingsOpacity = useCallback((map: MapLibreMap, opacity: number) => {
     const visibility = opacity > 0 ? "visible" : "none"
@@ -880,15 +1109,42 @@ export default function MapView({
     const map = mapInstanceRef.current
     if (!map || !styleReady || !manifest) return
 
-    const outlineVisible = layerStateRef.current.preVisible || layerStateRef.current.postVisible
-    ensureDatasetOutlineLayer(map, outlineVisible)
+    ensureDatasetOutlineLayer(map)
     const outlineSource = map.getSource(DATASET_OUTLINE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined
-    outlineSource?.setData(buildDatasetOutlineFeatureCollection(manifest.patches))
+    outlineSource?.setData(buildDatasetOutlineFeatureCollection(manifest.patches, outlineFootprintCacheRef.current))
+    updateDatasetOutlineVisibility(map)
 
     const generation = ++preloadGenerationRef.current
     let cancelled = false
 
+    const refreshOutlineFootprints = async () => {
+      const { preVisible, postVisible } = layerStateRef.current
+      const footprintEntries = await Promise.all(
+        manifest.patches
+          .filter((patch) => patch.pre.includes("/api/dataset/image/masked/") || patch.post.includes("/api/dataset/image/masked/"))
+          .map(async (patch) => {
+            const url = postVisible || !preVisible ? patch.post : patch.pre
+            try {
+              const footprint = await loadImageFootprint(url)
+              return footprint ? ([patch.id, footprint] as const) : null
+            } catch {
+              return null
+            }
+          })
+      )
+      if (cancelled || generation !== preloadGenerationRef.current) return
+      for (const entry of footprintEntries) {
+        if (entry) outlineFootprintCacheRef.current[entry[0]] = entry[1]
+      }
+      const source = map.getSource(DATASET_OUTLINE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined
+      source?.setData(buildDatasetOutlineFeatureCollection(manifest.patches, outlineFootprintCacheRef.current))
+      bringDatasetOutlineToFront(map)
+      updateDatasetOutlineVisibilityRef.current(map)
+    }
+
     const preload = async () => {
+      void refreshOutlineFootprints()
+
       // Let base satellite tiles render first before stressing WebGL with overlay sources
       await wait(PRELOAD_START_DELAY_MS)
       if (cancelled || generation !== preloadGenerationRef.current) return
@@ -918,7 +1174,40 @@ export default function MapView({
 
     void preload()
     return () => { cancelled = true }
-  }, [manifest, styleReady, getVisiblePatches, addPre, addPost, ensureDatasetOutlineLayer])
+  }, [manifest, styleReady, getVisiblePatches, addPre, addPost, ensureDatasetOutlineLayer, updateDatasetOutlineVisibility])
+
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map || !styleReady || !manifest || (!datasetPreVisible && !datasetPostVisible)) return
+
+    let cancelled = false
+    const refresh = async () => {
+      const footprintEntries = await Promise.all(
+        manifest.patches
+          .filter((patch) => patch.pre.includes("/api/dataset/image/masked/") || patch.post.includes("/api/dataset/image/masked/"))
+          .map(async (patch) => {
+            const url = datasetPostVisible || !datasetPreVisible ? patch.post : patch.pre
+            try {
+              const footprint = await loadImageFootprint(url)
+              return footprint ? ([patch.id, footprint] as const) : null
+            } catch {
+              return null
+            }
+          })
+      )
+      if (cancelled) return
+      for (const entry of footprintEntries) {
+        if (entry) outlineFootprintCacheRef.current[entry[0]] = entry[1]
+      }
+      const source = map.getSource(DATASET_OUTLINE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined
+      source?.setData(buildDatasetOutlineFeatureCollection(manifest.patches, outlineFootprintCacheRef.current))
+      bringDatasetOutlineToFront(map)
+      updateDatasetOutlineVisibility(map)
+    }
+
+    void refresh()
+    return () => { cancelled = true }
+  }, [manifest, styleReady, datasetPreVisible, datasetPostVisible, updateDatasetOutlineVisibility])
 
   // Preload combined building layer (also staggered — starts after overlay preload settles)
   useEffect(() => {
@@ -986,8 +1275,8 @@ export default function MapView({
         map.setPaintProperty(`pre-${id}`, "raster-opacity", datasetPreVisible ? datasetPreOpacity : 0)
       }
     }
-    setDatasetOutlineVisibility(map, datasetPreVisible || datasetPostVisible)
-  }, [datasetPreVisible, datasetPostVisible, datasetPreOpacity, setDatasetOutlineVisibility])
+    updateDatasetOutlineVisibility(map)
+  }, [datasetPreVisible, datasetPostVisible, datasetPreOpacity, updateDatasetOutlineVisibility])
 
   useEffect(() => {
     const map = mapInstanceRef.current
@@ -997,20 +1286,22 @@ export default function MapView({
         map.setPaintProperty(`post-${id}`, "raster-opacity", datasetPostVisible ? datasetPostOpacity : 0)
       }
     }
-    setDatasetOutlineVisibility(map, datasetPreVisible || datasetPostVisible)
-  }, [datasetPreVisible, datasetPostVisible, datasetPostOpacity, setDatasetOutlineVisibility])
+    updateDatasetOutlineVisibility(map)
+  }, [datasetPreVisible, datasetPostVisible, datasetPostOpacity, updateDatasetOutlineVisibility])
 
   useEffect(() => {
     const map = mapInstanceRef.current
     if (!map) return
     setBuildingsOpacity(map, datasetBuildingsVisible ? datasetBuildingsOpacity : 0)
-  }, [datasetBuildingsVisible, datasetBuildingsOpacity, setBuildingsOpacity])
+    updateDatasetOutlineVisibility(map)
+  }, [datasetBuildingsVisible, datasetBuildingsOpacity, setBuildingsOpacity, updateDatasetOutlineVisibility])
 
   useEffect(() => {
     const map = mapInstanceRef.current
     if (!map) return
     setPredictedOpacity(map, datasetPredictedVisible ? datasetPredictedOpacity : 0)
-  }, [datasetPredictedVisible, datasetPredictedOpacity, setPredictedOpacity])
+    updateDatasetOutlineVisibility(map)
+  }, [datasetPredictedVisible, datasetPredictedOpacity, setPredictedOpacity, updateDatasetOutlineVisibility])
 
   // Map move only updates visible patch count
   const handleMapMove = useCallback(() => {
