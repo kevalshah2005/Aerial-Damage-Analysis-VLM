@@ -263,7 +263,7 @@ def main():
         loaded_images: Dict[str, Image.Image] = {}
         skip_scene = False
         for phase in phases_to_crop:
-            img_fname = f"{sid}_{phase}_disaster.png"
+            img_fname = f"{sid}_{phase}_disaster.webp"
             img_path = os.path.join(images_dir, img_fname)
             if not os.path.exists(img_path):
                 print(f"[WARN] missing image: {img_path}")
@@ -367,14 +367,14 @@ def main():
                 "damage_label": damage_label,
                 "lat": lat,
                 "lng": lng,
-                "polygon_px": [[round(x, 2), round(y, 2)] for x, y in rings_px[0]],
+                "polygon_px": [[x, y] for x, y in rings_px[0]],
                 "polygon_lnglat": (
-                    [[round(x, 6), round(y, 6)] for x, y in rings_lnglat[0]]
+                    [[x, y] for x, y in rings_lnglat[0]]
                     if rings_lnglat else None
                 ),
-                "bbox_px": [round(v, 2) for v in bbox],
-                "area_px2": round(area_px2, 2),
-                "area_m2": round(area_m2, 2) if area_m2 is not None else None,
+                "bbox_px": [v for v in bbox],
+                "area_px2": area_px2 if area_px2 is not None else None,
+                "area_m2": area_m2 if area_m2 is not None else None,
                 "gsd": gsd,
                 "sensor": pre_meta.get("sensor"),
                 "capture_date_pre": pre_meta.get("capture_date"),
