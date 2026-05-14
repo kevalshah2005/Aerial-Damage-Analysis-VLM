@@ -489,20 +489,27 @@ export default function ChatPanel({
         {loadingConversations || loadingMessages ? (
           <div className="text-xs text-muted-foreground">Loading chat...</div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20">
-              <Bot className="h-6 w-6 text-primary" />
+          <div className="flex flex-col items-center justify-center h-full gap-5">
+            <div className="flex items-center justify-center h-20 w-20 rounded-3xl bg-primary/10 border border-primary/20">
+              <Bot className="h-10 w-10 text-primary" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-base font-semibold text-foreground">
                 Welcome to GeoView AI
               </p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+              <p className="text-sm text-muted-foreground mt-2 max-w-[260px] leading-relaxed">
                 Ask questions about aerial imagery, satellite data, or
                 geospatial analysis.
               </p>
             </div>
             <div className="flex flex-col gap-2 w-full max-w-[280px] mt-2">
+              <button
+                onClick={() => handleSuggestion("What can you do?")}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/15 transition-colors border border-primary/25"
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                <span>What can you do?</span>
+              </button>
               {SUGGESTED_QUESTIONS.map((q) => (
                 <button
                   key={q.text}
