@@ -1,6 +1,6 @@
 # Geospatial Dashboard Chatbot
 
-A Next.js 16 application featuring an interactive geospatial dashboard with an integrated AI chatbot.
+A Next.js 16 application featuring an interactive geospatial dashboard with an integrated AI chatbot. Visit the deployed website here: http://geoview.jumpingcrab.com:3000/
 
 ## Features
 - **Interactive Map**: Built with Leaflet and React-Leaflet.
@@ -57,7 +57,7 @@ GEOTRANSFORM_IMAGE_EXTENSION=png
 1. In IAM -> Users -> *your user* -> Security credentials, create an access key (Local code), then copy:
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
-2. In Bedrock -> Inference profiles, copy the application inference profile ID or ARN and set it as:
+2. In Bedrock -> Inference profiles -> Application, copy the inference profile ID or ARN and set it as:
    - `BEDROCK_MODEL_ID`
 3. In Cognito -> User pools -> Test User Pool, copy:
    - User pool ID -> `NEXT_PUBLIC_COGNITO_USER_POOL_ID`
