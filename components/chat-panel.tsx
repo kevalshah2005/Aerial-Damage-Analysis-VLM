@@ -5,7 +5,9 @@ import React from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import type { UIMessage } from "ai"
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect, useState, useCallback } from "react"
+import { isToolUIPart } from "ai"
+import type { MapAction } from "@/lib/map-actions"
 import { fetchAuthSession } from "aws-amplify/auth"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -56,6 +58,7 @@ type StoredMessage = {
   messageId: string
   role: "user" | "assistant" | "system"
   content: string
+  toolCalls?: Array<{ toolCallId: string; toolName: string; input: Record<string, unknown> }>
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {
@@ -67,7 +70,13 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${token}` }
 }
 
-export default function ChatPanel() {
+export default function ChatPanel({
+  onMapAction,
+  onConversationChange,
+}: {
+  onMapAction?: (action: MapAction) => void
+  onConversationChange?: () => void
+}) {
   const [input, setInput] = useState("")
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [editingConversationId, setEditingConversationId] = useState<string | null>(
@@ -129,6 +138,40 @@ export default function ChatPanel() {
   })
 
   const isStreaming = status === "streaming"
+  const executedToolCallIds = useRef<Set<string>>(new Set())
+
+  // Execute map actions from tool invocations in completed assistant messages
+  const onMapActionRef = useRef(onMapAction)
+  useEffect(() => { onMapActionRef.current = onMapAction }, [onMapAction])
+
+  useEffect(() => {
+    if (!onMapActionRef.current) return
+    for (const message of messages) {
+      if (message.role !== "assistant" || !message.parts) continue
+      for (const part of message.parts) {
+        // AI SDK v6: tool parts have type "tool-{name}", state "output-available", and flat input/output
+        if (!isToolUIPart(part) || part.state !== "output-available") continue
+        if (executedToolCallIds.current.has(part.toolCallId)) continue
+
+        executedToolCallIds.current.add(part.toolCallId)
+        const toolName = (part.type as string).slice(5) // strip "tool-" prefix
+        const args = part.input as Record<string, unknown>
+
+        let action: MapAction | null = null
+        if (toolName === "fly_to") action = { type: "fly_to", ...args } as MapAction
+        else if (toolName === "fit_bounds") action = { type: "fit_bounds", ...args } as MapAction
+        else if (toolName === "set_zoom") action = { type: "set_zoom", ...args } as MapAction
+        else if (toolName === "set_base_layer") action = { type: "set_base_layer", ...args } as MapAction
+        else if (toolName === "toggle_layer") action = { type: "toggle_layer", ...args } as MapAction
+        else if (toolName === "set_layer_opacity") action = { type: "set_layer_opacity", ...args } as MapAction
+        else if (toolName === "place_marker") action = { type: "place_marker", ...args } as MapAction
+        else if (toolName === "clear_markers") action = { type: "clear_markers" }
+        else if (toolName === "fit_to_dataset") action = { type: "fit_to_dataset" }
+
+        if (action) onMapActionRef.current(action)
+      }
+    }
+  }, [messages])
 
   useEffect(() => {
     scrollToBottom()
@@ -179,13 +222,34 @@ export default function ChatPanel() {
         }
         const data = await res.json()
         const initialMessages: UIMessage[] = (data.messages as StoredMessage[]).map(
-          (message) => ({
-            id: message.messageId,
-            role: message.role,
-            parts: [{ type: "text", text: message.content }],
-          })
+          (message) => {
+            const toolParts = (message.toolCalls ?? []).map((tc) => ({
+              type: `tool-${tc.toolName}` as const,
+              toolCallId: tc.toolCallId,
+              state: "output-available" as const,
+              input: tc.input,
+              output: { ok: true },
+            }))
+            return {
+              id: message.messageId,
+              role: message.role,
+              parts: [...toolParts, { type: "text" as const, text: message.content }],
+            }
+          }
         )
         if (!cancelled) {
+          // Pre-suppress session-only tool calls so they don't re-fire on load
+          const SESSION_ONLY_TOOLS = new Set(["place_marker", "clear_markers"])
+          for (const msg of initialMessages) {
+            for (const part of msg.parts ?? []) {
+              if (typeof (part as { type?: string }).type === "string" && (part as { type: string }).type.startsWith("tool-")) {
+                const toolName = (part as { type: string }).type.slice(5)
+                if (SESSION_ONLY_TOOLS.has(toolName)) {
+                  executedToolCallIds.current.add((part as { toolCallId: string }).toolCallId)
+                }
+              }
+            }
+          }
           setMessages(initialMessages)
           // Ensure older chats open at the latest message, not top.
           requestAnimationFrame(() => requestAnimationFrame(scrollToBottom))
@@ -237,6 +301,8 @@ export default function ChatPanel() {
 
   const handleNewChat = async () => {
     if (isStreaming) return
+    onConversationChange?.()
+    executedToolCallIds.current = new Set()
     const created = await createConversation()
     setConversations((prev) => [created, ...prev])
     setActiveConversationId(created.conversationId)
@@ -263,6 +329,8 @@ export default function ChatPanel() {
     setConversations(remaining)
 
     if (remaining.length === 0) {
+      onConversationChange?.()
+      executedToolCallIds.current = new Set()
       const created = await createConversation()
       setConversations([created])
       setActiveConversationId(created.conversationId)
@@ -271,6 +339,8 @@ export default function ChatPanel() {
     }
 
     if (activeConversationId === conversationId) {
+      onConversationChange?.()
+      executedToolCallIds.current = new Set()
       setActiveConversationId(remaining[0].conversationId)
     }
   }
@@ -362,7 +432,12 @@ export default function ChatPanel() {
                   />
                 ) : (
                   <button
-                    onClick={() => setActiveConversationId(conversation.conversationId)}
+                    onClick={() => {
+                      if (conversation.conversationId === activeConversationId) return
+                      onConversationChange?.()
+                      executedToolCallIds.current = new Set()
+                      setActiveConversationId(conversation.conversationId)
+                    }}
                     className="w-full text-left truncate"
                   >
                     {conversation.title || "New Chat"}
@@ -370,7 +445,8 @@ export default function ChatPanel() {
                 )}
               </div>
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   setEditingConversationId(conversation.conversationId)
                   setEditingTitle(conversation.title || "New Chat")
                 }}
@@ -380,7 +456,10 @@ export default function ChatPanel() {
                 <Pencil className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={() => handleDeleteConversation(conversation.conversationId)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handleDeleteConversation(conversation.conversationId)
+                }}
                 aria-label="Delete chat"
                 className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
               >
@@ -476,6 +555,64 @@ export default function ChatPanel() {
   )
 }
 
+const TOOL_META: Record<string, { label: string; icon: string }> = {
+  fly_to:          { label: "Navigating map",     icon: "✈" },
+  fit_bounds:      { label: "Adjusting view",      icon: "🗺" },
+  set_zoom:        { label: "Setting zoom",         icon: "🔍" },
+  set_base_layer:  { label: "Switching map style",  icon: "🗺" },
+  toggle_layer:    { label: "Toggling layer",        icon: "👁" },
+  set_layer_opacity: { label: "Adjusting opacity",  icon: "🎨" },
+  place_marker:    { label: "Placing marker",        icon: "📍" },
+  clear_markers:   { label: "Clearing markers",      icon: "🗑" },
+  fit_to_dataset:  { label: "Zooming to dataset",    icon: "📡" },
+  query_dataset:   { label: "Querying dataset",      icon: "📊" },
+  web_search:      { label: "Searching the web",     icon: "🌐" },
+}
+
+function getToolParts(message: UIMessage) {
+  if (!message.parts) return []
+  return message.parts.filter(
+    (p): p is typeof p & { type: string; toolCallId: string; state: string; input: unknown } =>
+      typeof p.type === "string" && p.type.startsWith("tool-")
+  )
+}
+
+function ToolStatusPills({ message }: { message: UIMessage }) {
+  const toolParts = getToolParts(message)
+  if (toolParts.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mb-2">
+      {toolParts.map((part) => {
+        const toolName = (part.type as string).slice(5)
+        const meta = TOOL_META[toolName] ?? { label: toolName, icon: "⚙" }
+        const done = part.state === "output-available"
+        return (
+          <span
+            key={part.toolCallId}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all ${
+              done
+                ? "bg-muted/60 border-border text-muted-foreground"
+                : "bg-primary/10 border-primary/30 text-primary"
+            }`}
+          >
+            <span>{meta.icon}</span>
+            <span>{meta.label}</span>
+            {!done && (
+              <span className="flex gap-0.5 ml-0.5">
+                <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+              </span>
+            )}
+            {done && <span className="ml-0.5 text-[9px] opacity-60">✓</span>}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 function MessageBubble({ message }: { message: UIMessage }) {
   const isUser = message.role === "user"
   const text = getMessageText(message)
@@ -506,6 +643,7 @@ function MessageBubble({ message }: { message: UIMessage }) {
           <p className="text-xs leading-relaxed whitespace-pre-wrap">{text}</p>
         ) : (
           <div className="text-xs leading-relaxed break-words">
+            <ToolStatusPills message={message} />
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
