@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation"
 import { useAuthenticator } from "@aws-amplify/ui-react"
 import { Map as MapIcon } from "lucide-react"
 import dynamic from "next/dynamic"
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+  type ImperativePanelHandle,
+} from "react-resizable-panels"
 
 import DashboardHeader from "@/components/dashboard-header"
 import ChatPanel from "@/components/chat-panel"
@@ -31,6 +36,7 @@ export default function Page() {
   const router = useRouter()
   const [chatOpen, setChatOpen] = useState(true)
   const mapActionRef = useRef<((action: MapAction) => void) | null>(null)
+  const chatPanelRef = useRef<ImperativePanelHandle>(null)
 
   const [manifest, setManifest] = useState<DatasetManifest | null>(null)
   const [datasetPreVisible, setDatasetPreVisible] = useState(false)
@@ -87,6 +93,13 @@ export default function Page() {
     if (!skipAuth && authStatus === 'unauthenticated') router.push('/auth')
   }, [authStatus, router])
 
+  useEffect(() => {
+    const panel = chatPanelRef.current
+    if (!panel) return
+    if (chatOpen) panel.expand()
+    else panel.collapse()
+  }, [chatOpen])
+
   if (!skipAuth && (authStatus === 'configuring' || authStatus === 'unauthenticated')) {
     return <div className="flex h-screen items-center justify-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
   }
@@ -96,66 +109,55 @@ export default function Page() {
       <DashboardHeader chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        {chatOpen ? (
-          <PanelGroup direction="horizontal" className="w-full h-full">
-            <Panel defaultSize={72} minSize={45}>
-              <div className="h-full min-w-0 relative">
-                <MapView
-                  mapActionRef={mapActionRef}
-                  manifest={manifest}
-                  datasetPreVisible={datasetPreVisible}
-                  datasetPostVisible={datasetPostVisible}
-                  datasetBuildingsVisible={datasetBuildingsVisible}
-                  datasetPredictedVisible={datasetPredictedVisible}
-                  datasetPreOpacity={datasetPreOpacity}
-                  datasetPostOpacity={datasetPostOpacity}
-                  datasetBuildingsOpacity={datasetBuildingsOpacity}
-                  datasetPredictedOpacity={datasetPredictedOpacity}
-                  onToggleDatasetPre={() => setDatasetPreVisible(v => !v)}
-                  onToggleDatasetPost={() => setDatasetPostVisible(v => !v)}
-                  onToggleDatasetBuildings={() => setDatasetBuildingsVisible(v => !v)}
-                  onToggleDatasetPredicted={() => setDatasetPredictedVisible(v => !v)}
-                  onSetDatasetPreOpacity={setDatasetPreOpacity}
-                  onSetDatasetPostOpacity={setDatasetPostOpacity}
-                  onSetDatasetBuildingsOpacity={setDatasetBuildingsOpacity}
-                  onSetDatasetPredictedOpacity={setDatasetPredictedOpacity}
-                />
-              </div>
-            </Panel>
-            <PanelResizeHandle className="w-1 bg-border/60 hover:bg-primary/60 transition-colors relative group" />
-            <Panel defaultSize={28} minSize={20} maxSize={45}>
-              <div className="h-full border-l border-border bg-card/50 backdrop-blur-md relative z-10 shadow-2xl hidden md:block">
-                <ChatPanel
-                  onMapAction={handleMapAction}
-                  onConversationChange={resetChatDrivenMapState}
-                />
-              </div>
-            </Panel>
-          </PanelGroup>
-        ) : (
-          <div className="flex-1 min-w-0 h-full relative">
-            <MapView
-              mapActionRef={mapActionRef}
-              manifest={manifest}
-              datasetPreVisible={datasetPreVisible}
-              datasetPostVisible={datasetPostVisible}
-              datasetBuildingsVisible={datasetBuildingsVisible}
-              datasetPredictedVisible={datasetPredictedVisible}
-              datasetPreOpacity={datasetPreOpacity}
-              datasetPostOpacity={datasetPostOpacity}
-              datasetBuildingsOpacity={datasetBuildingsOpacity}
-              datasetPredictedOpacity={datasetPredictedOpacity}
-              onToggleDatasetPre={() => setDatasetPreVisible(v => !v)}
-              onToggleDatasetPost={() => setDatasetPostVisible(v => !v)}
-              onToggleDatasetBuildings={() => setDatasetBuildingsVisible(v => !v)}
-              onToggleDatasetPredicted={() => setDatasetPredictedVisible(v => !v)}
-              onSetDatasetPreOpacity={setDatasetPreOpacity}
-              onSetDatasetPostOpacity={setDatasetPostOpacity}
-              onSetDatasetBuildingsOpacity={setDatasetBuildingsOpacity}
-              onSetDatasetPredictedOpacity={setDatasetPredictedOpacity}
-            />
-          </div>
-        )}
+        <PanelGroup direction="horizontal" className="w-full h-full">
+          <Panel id="map" order={1} defaultSize={72} minSize={45}>
+            <div className="h-full min-w-0 relative">
+              <MapView
+                mapActionRef={mapActionRef}
+                manifest={manifest}
+                datasetPreVisible={datasetPreVisible}
+                datasetPostVisible={datasetPostVisible}
+                datasetBuildingsVisible={datasetBuildingsVisible}
+                datasetPredictedVisible={datasetPredictedVisible}
+                datasetPreOpacity={datasetPreOpacity}
+                datasetPostOpacity={datasetPostOpacity}
+                datasetBuildingsOpacity={datasetBuildingsOpacity}
+                datasetPredictedOpacity={datasetPredictedOpacity}
+                onToggleDatasetPre={() => setDatasetPreVisible(v => !v)}
+                onToggleDatasetPost={() => setDatasetPostVisible(v => !v)}
+                onToggleDatasetBuildings={() => setDatasetBuildingsVisible(v => !v)}
+                onToggleDatasetPredicted={() => setDatasetPredictedVisible(v => !v)}
+                onSetDatasetPreOpacity={setDatasetPreOpacity}
+                onSetDatasetPostOpacity={setDatasetPostOpacity}
+                onSetDatasetBuildingsOpacity={setDatasetBuildingsOpacity}
+                onSetDatasetPredictedOpacity={setDatasetPredictedOpacity}
+              />
+            </div>
+          </Panel>
+          <PanelResizeHandle
+            className="w-1 bg-border/60 hover:bg-primary/60 transition-colors relative group shrink-0"
+            disabled={!chatOpen}
+          />
+          <Panel
+            ref={chatPanelRef}
+            id="chat"
+            order={2}
+            defaultSize={28}
+            minSize={20}
+            maxSize={45}
+            collapsible
+            collapsedSize={0}
+            onCollapse={() => setChatOpen(false)}
+            onExpand={() => setChatOpen(true)}
+          >
+            <div className="h-full border-l border-border bg-card/50 backdrop-blur-md relative z-10 shadow-2xl hidden md:block">
+              <ChatPanel
+                onMapAction={handleMapAction}
+                onConversationChange={resetChatDrivenMapState}
+              />
+            </div>
+          </Panel>
+        </PanelGroup>
       </div>
     </div>
   )

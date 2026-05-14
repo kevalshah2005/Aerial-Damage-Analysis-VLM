@@ -23,6 +23,8 @@ export interface DatasetPatch {
   snappedPreCoordinates?: DatasetImageCoordinates
   snappedPostCoordinates?: DatasetImageCoordinates
   snappedDisplayCoordinates?: DatasetImageCoordinates
+  /** Optional quad used only for the dataset perimeter outline (e.g. seam tiles); does not affect image placement. */
+  outlineDisplayCoordinates?: DatasetImageCoordinates
   buildingCount: number
 }
 
