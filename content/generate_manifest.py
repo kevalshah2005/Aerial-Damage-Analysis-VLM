@@ -164,8 +164,12 @@ def main():
 
     s3_client = boto3.client("s3")
 
-    IMAGE_WIDTH = 1024
-    IMAGE_HEIGHT = 1024
+    # The rendered xView2 chips are 1024x1024, but the geotransform footprint
+    # inferred from neighboring Joplin chips is not square. Using 1024x1024
+    # shrinks the overlays; using 1126x902 better matches the observed source
+    # spacing and reduces patch seams/overlap.
+    IMAGE_WIDTH = 1126
+    IMAGE_HEIGHT = 902
 
     patches: Dict[str, Dict] = {}
     label_json_keys = [
@@ -232,6 +236,7 @@ def main():
             post_bounds = calculate_bounds_from_geotransform(post_gt_data[0], IMAGE_WIDTH, IMAGE_HEIGHT)
             patch_bounds = merge_bounds(pre_bounds, post_bounds)
         else:
+            post_bounds = pre_bounds
             patch_bounds = pre_bounds
 
         total_buildings = 0
@@ -265,6 +270,15 @@ def main():
             "preJson": pre_json_url,
             "postJson": post_json_url,
             "bounds": leaflet_bounds,
+            "preBounds": [
+                [pre_bounds[1], pre_bounds[0]],
+                [pre_bounds[3], pre_bounds[2]],
+            ],
+            "postBounds": [
+                [post_bounds[1], post_bounds[0]],
+                [post_bounds[3], post_bounds[2]],
+            ],
+            "displayBounds": leaflet_bounds,
             "buildingCount": total_buildings,
         })
 

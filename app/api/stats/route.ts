@@ -1,24 +1,176 @@
 import { NextResponse } from 'next/server'
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
+import { join, dirname } from 'path'
 
-const BEST_MODEL = 'amazon.nova-pro-v1:0'
+const LABELS = ['No Damage', 'Minor Damage', 'Major Damage', 'Destroyed'] as const
+type Label = typeof LABELS[number]
+
+const MODEL_NAMES: Record<string, string> = {
+  'amazon.nova-pro-v1:0': 'Nova Pro',
+  'google.gemma-3-12b-it': 'Gemma 3 12B',
+  'qwen.qwen3-vl-235b-a22b': 'Qwen3 VL 235B',
+}
+
+function parsePct(v: string | number): number {
+  if (typeof v === 'number') return Math.round(v * 1000) / 10 // 0.92 → 92.0
+  return parseFloat(v.replace('%', ''))
+}
+
+function normalizeBenchmarkModel(m: Record<string, unknown>) {
+  const cm = m.confusionMatrix as Record<Label, Record<Label, number>>
+  const raw = m.classMetrics as Record<Label, { precision: string; recall: string; f1: string }>
+  const totalSamples = LABELS.reduce((s, a) =>
+    s + LABELS.reduce((ss, p) => ss + (cm[a]?.[p] ?? 0), 0), 0)
+  const classMetrics = Object.fromEntries(LABELS.map(cls => [cls, {
+    precision: parsePct(raw[cls].precision),
+    recall: parsePct(raw[cls].recall),
+    f1: parsePct(raw[cls].f1),
+    support: LABELS.reduce((s, p) => s + (cm[cls]?.[p] ?? 0), 0),
+  }])) as Record<Label, { precision: number; recall: number; f1: number; support: number }>
+  const correct = LABELS.reduce((s, cls) => s + (cm[cls]?.[cls] ?? 0), 0)
+  const accuracy = totalSamples > 0 ? Math.round((correct / totalSamples) * 1000) / 10 : 0
+  const macroF1 = Math.round(LABELS.reduce((s, cls) => s + classMetrics[cls].f1, 0) / LABELS.length * 10) / 10
+  return { accuracy, macroF1, weightedF1: accuracy, totalSamples, classMetrics, confusionMatrix: cm }
+}
+
+function normalizePipelineModel(m: Record<string, unknown>, details: Detail[]) {
+  const classMetrics = Object.fromEntries(LABELS.map(cls => {
+    const c = m[cls] as { precision: number; recall: number; 'f1-score': number; support: number }
+    return [cls, {
+      precision: Math.round(c.precision * 1000) / 10,
+      recall: Math.round(c.recall * 1000) / 10,
+      f1: Math.round(c['f1-score'] * 1000) / 10,
+      support: c.support,
+    }]
+  })) as Record<Label, { precision: number; recall: number; f1: number; support: number }>
+
+  const confusionMatrix = Object.fromEntries(
+    LABELS.map(a => [a, Object.fromEntries(LABELS.map(p => [p, 0]))])
+  ) as Record<Label, Record<Label, number>>
+  for (const d of details) {
+    const a = d.actual_label as Label, p = d.predicted_label as Label
+    if (confusionMatrix[a] && confusionMatrix[a][p] !== undefined) confusionMatrix[a][p]++
+  }
+
+  const accuracy = Math.round((m.accuracy as number) * 1000) / 10
+  const macro = m['macro avg'] as { 'f1-score': number }
+  const weighted = m['weighted avg'] as { 'f1-score': number }
+  const macroF1 = Math.round(macro['f1-score'] * 1000) / 10
+  const weightedF1 = Math.round(weighted['f1-score'] * 1000) / 10
+  const totalSamples = LABELS.reduce((s, cls) => s + classMetrics[cls].support, 0)
+  return { accuracy, macroF1, weightedF1, totalSamples, classMetrics, confusionMatrix }
+}
+
+interface Detail {
+  uid: string
+  scene_id: string
+  status: string
+  actual_label: string
+  predicted_label: string
+  confidence_score: number | string
+}
+
+async function fetchAndCachePipeline() {
+  const cachePath = join(process.cwd(), 'content', 'cache', 'pipeline_results_full.json')
+  if (existsSync(cachePath)) {
+    return JSON.parse(readFileSync(cachePath, 'utf-8'))
+  }
+  const manifest = JSON.parse(readFileSync(join(process.cwd(), 'content', 'manifest.json'), 'utf-8'))
+  const base = manifest.patches[0].postJson.split('/labels/')[0]
+  const res = await fetch(`${base}/generated_labels/pipeline_results_full.json`)
+  if (!res.ok) throw new Error('Failed to fetch pipeline results')
+  const data = await res.json()
+  mkdirSync(dirname(cachePath), { recursive: true })
+  writeFileSync(cachePath, JSON.stringify(data))
+  return data
+}
 
 export async function GET() {
-  const benchmark = JSON.parse(readFileSync(join(process.cwd(), 'content', 'benchmark_results.json'), 'utf-8'))
-  const results = JSON.parse(readFileSync(join(process.cwd(), 'results.json'), 'utf-8'))
+  try {
+    const benchmark = JSON.parse(readFileSync(join(process.cwd(), 'content', 'benchmark_results.json'), 'utf-8'))
+    const pipeline = await fetchAndCachePipeline()
 
-  const modelMetrics = benchmark.metrics[BEST_MODEL]
+    const models = []
 
-  const totalSamples = Object.values(modelMetrics.confusionMatrix as Record<string, Record<string, number>>)
-    .reduce((sum, row) => sum + Object.values(row).reduce((s, v) => s + v, 0), 0)
+    // Benchmark models
+    for (const [modelId, metrics] of Object.entries(benchmark.metrics)) {
+      models.push({
+        id: modelId,
+        shortName: MODEL_NAMES[modelId] ?? modelId,
+        source: 'benchmark' as const,
+        ...normalizeBenchmarkModel(metrics as Record<string, unknown>),
+      })
+    }
 
-  return NextResponse.json({
-    model: BEST_MODEL,
-    accuracy: modelMetrics.accuracy,
-    classMetrics: modelMetrics.classMetrics,
-    confusionMatrix: modelMetrics.confusionMatrix,
-    totalSamples,
-    results,
-  })
+    // Pipeline model
+    const pipelineModelId = Object.keys(pipeline.metrics)[0]
+    const pipelineDetails: Detail[] = pipeline.details ?? []
+    models.push({
+      id: pipelineModelId,
+      shortName: MODEL_NAMES[pipelineModelId] ?? pipelineModelId,
+      source: 'pipeline' as const,
+      ...normalizePipelineModel(pipeline.metrics[pipelineModelId], pipelineDetails),
+    })
+
+    // Confidence distribution from pipeline details
+    const confBins: Record<number, number> = {}
+    for (const d of pipelineDetails) {
+      const raw = typeof d.confidence_score === 'string'
+        ? parseInt(d.confidence_score.replace('%', ''))
+        : d.confidence_score
+      if (!isNaN(raw)) {
+        const bin = Math.min(9, Math.floor(raw / 10)) * 10
+        confBins[bin] = (confBins[bin] ?? 0) + 1
+      }
+    }
+    const confidenceDistribution = Array.from({ length: 10 }, (_, i) => i * 10).map(bin => ({
+      bin,
+      label: bin === 90 ? '90–100' : `${bin}–${bin + 9}`,
+      count: confBins[bin] ?? 0,
+    }))
+
+    // Actual vs predicted class distribution from pipeline
+    const actualCounts = Object.fromEntries(LABELS.map(l => [l, 0]))
+    const predictedCounts = Object.fromEntries(LABELS.map(l => [l, 0]))
+    for (const d of pipelineDetails) {
+      if (actualCounts[d.actual_label] !== undefined) actualCounts[d.actual_label]++
+      if (predictedCounts[d.predicted_label] !== undefined) predictedCounts[d.predicted_label]++
+    }
+    const classDistribution = LABELS.map(label => ({
+      label,
+      actual: actualCounts[label],
+      predicted: predictedCounts[label],
+    }))
+
+    // Accuracy by confidence band
+    const confAccuracy = Array.from({ length: 10 }, (_, i) => {
+      const bin = i * 10
+      const inBin = pipelineDetails.filter(d => {
+        const raw = typeof d.confidence_score === 'string'
+          ? parseInt(d.confidence_score.replace('%', ''))
+          : d.confidence_score
+        return !isNaN(raw) && raw >= bin && (bin === 90 ? raw <= 100 : raw < bin + 10)
+      })
+      const correct = inBin.filter(d => d.actual_label === d.predicted_label).length
+      return {
+        bin,
+        label: bin === 90 ? '90–100' : `${bin}–${bin + 9}`,
+        count: inBin.length,
+        accuracy: inBin.length > 0 ? Math.round((correct / inBin.length) * 1000) / 10 : 0,
+      }
+    })
+
+    return NextResponse.json({
+      models,
+      pipeline: {
+        modelId: pipelineModelId,
+        totalSamples: pipelineDetails.length,
+        confidenceDistribution,
+        classDistribution,
+        confAccuracy,
+      },
+    })
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
