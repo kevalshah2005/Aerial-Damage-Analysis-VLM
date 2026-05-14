@@ -1,5 +1,4 @@
 import {
-  BatchWriteCommand,
   DeleteCommand,
   GetCommand,
   PutCommand,
@@ -225,30 +224,41 @@ export async function deleteConversation(conversationId: string) {
   const ddb = getDdbClient()
 
   const messages = await getConversationMessages(conversationId)
-  for (let i = 0; i < messages.length; i += 25) {
-    const chunk = messages.slice(i, i + 25)
-    await ddb.send(
-      new BatchWriteCommand({
-        RequestItems: {
-          [messagesTable]: chunk.map((message) => ({
-            DeleteRequest: {
-              Key: {
-                conversationId: message.conversationId,
-                createdAt: message.createdAt,
-              },
-            },
-          })),
-        },
-      })
-    )
-  }
-
   await ddb.send(
     new DeleteCommand({
       TableName: conversationsTable,
       Key: { conversationId },
     })
   )
+
+  for (const message of messages) {
+    try {
+      await ddb.send(
+        new DeleteCommand({
+          TableName: messagesTable,
+          Key: {
+            conversationId: message.conversationId,
+            createdAt: message.createdAt,
+          },
+        })
+      )
+    } catch {
+      try {
+        await ddb.send(
+          new DeleteCommand({
+            TableName: messagesTable,
+            Key: {
+              conversationId: message.conversationId,
+              messageId: message.messageId,
+            },
+          })
+        )
+      } catch {
+        // Leave any orphaned message cleanup as best-effort; the conversation
+        // record is already gone, so the deleted chat no longer appears.
+      }
+    }
+  }
 }
 
 export function generateConversationTitleFromMessage(message: string): string {

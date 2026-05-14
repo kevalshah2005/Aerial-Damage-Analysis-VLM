@@ -8,3 +8,4 @@ export type MapAction =
   | { type: "place_marker"; lat: number; lng: number; label?: string }
   | { type: "clear_markers" }
   | { type: "fit_to_dataset" }
+  | { type: "show_damage_path"; visible: boolean }

@@ -116,6 +116,7 @@ export default function VLMPage() {
   const [editingTitle, setEditingTitle] = useState('')
 
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [lightboxZoom, setLightboxZoom] = useState(1)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -350,19 +351,44 @@ export default function VLMPage() {
       {/* Lightbox */}
       {lightboxUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
-          onClick={() => setLightboxUrl(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm"
+          onClick={() => { setLightboxUrl(null); setLightboxZoom(1) }}
+          onWheel={e => {
+            e.preventDefault()
+            setLightboxZoom(z => Math.min(5, Math.max(0.5, z - e.deltaY * 0.001)))
+          }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightboxUrl}
-            alt="Full size"
-            className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl object-contain"
-            onClick={e => e.stopPropagation()}
-          />
+          <div className="overflow-hidden flex items-center justify-center w-full h-full" onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lightboxUrl}
+              alt="Full size"
+              className="rounded-lg shadow-2xl object-contain select-none transition-transform duration-75"
+              style={{ maxHeight: '90vh', maxWidth: '90vw', transform: `scale(${lightboxZoom})`, transformOrigin: 'center' }}
+              draggable={false}
+            />
+          </div>
+          {/* Controls */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1.5 border border-border shadow-lg">
+            <button
+              className="flex items-center justify-center h-6 w-6 rounded-full hover:bg-muted text-foreground transition-colors text-sm font-bold"
+              onClick={e => { e.stopPropagation(); setLightboxZoom(z => Math.max(0.5, z - 0.25)) }}
+              title="Zoom out"
+            >−</button>
+            <button
+              className="text-[11px] text-muted-foreground w-10 text-center tabular-nums hover:text-foreground transition-colors"
+              onClick={e => { e.stopPropagation(); setLightboxZoom(1) }}
+              title="Reset zoom"
+            >{Math.round(lightboxZoom * 100)}%</button>
+            <button
+              className="flex items-center justify-center h-6 w-6 rounded-full hover:bg-muted text-foreground transition-colors text-sm font-bold"
+              onClick={e => { e.stopPropagation(); setLightboxZoom(z => Math.min(5, z + 0.25)) }}
+              title="Zoom in"
+            >+</button>
+          </div>
           <button
             className="absolute top-4 right-4 flex items-center justify-center h-8 w-8 rounded-full bg-background/80 text-foreground hover:bg-background transition-colors"
-            onClick={() => setLightboxUrl(null)}
+            onClick={() => { setLightboxUrl(null); setLightboxZoom(1) }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -493,9 +519,9 @@ export default function VLMPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 px-4 py-6 max-w-3xl mx-auto w-full">
+              <div className="flex flex-col gap-7 px-4 py-6 max-w-3xl mx-auto w-full">
                 {messages.map(msg => (
-                  <MessageRow key={msg.id} msg={msg} onImageClick={setLightboxUrl} />
+                  <MessageRow key={msg.id} msg={msg} onImageClick={url => { setLightboxUrl(url); setLightboxZoom(1) }} />
                 ))}
                 {isLoading && (
                   <div className="flex gap-3">

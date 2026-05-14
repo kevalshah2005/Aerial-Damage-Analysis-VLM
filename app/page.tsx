@@ -41,6 +41,8 @@ export default function Page() {
   const [datasetPostOpacity, setDatasetPostOpacity] = useState(1)
   const [datasetBuildingsOpacity, setDatasetBuildingsOpacity] = useState(1)
   const [datasetPredictedOpacity, setDatasetPredictedOpacity] = useState(1)
+  const [datasetOffsetLat, setDatasetOffsetLat] = useState(-0.00010)
+  const [datasetOffsetLng, setDatasetOffsetLng] = useState(0.00002)
   const resetChatDrivenMapState = useCallback(() => {
     setDatasetPreVisible(false)
     setDatasetPostVisible(false)
@@ -69,13 +71,17 @@ export default function Page() {
   }, [setDatasetPreVisible, setDatasetPostVisible, setDatasetBuildingsVisible, setDatasetPredictedVisible, setDatasetPreOpacity, setDatasetPostOpacity, setDatasetBuildingsOpacity, setDatasetPredictedOpacity])
 
   useEffect(() => {
-    fetch("/api/dataset/manifest", { cache: "no-store" })
+    const params = new URLSearchParams({
+      offsetLat: datasetOffsetLat.toString(),
+      offsetLng: datasetOffsetLng.toString(),
+    })
+    fetch(`/api/dataset/manifest?${params}`, { cache: "no-store" })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data) setManifest(data)
       })
       .catch(() => {})
-  }, [])
+  }, [datasetOffsetLat, datasetOffsetLng])
 
   useEffect(() => {
     if (!skipAuth && authStatus === 'unauthenticated') router.push('/auth')

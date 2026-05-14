@@ -16,15 +16,22 @@ function parsePct(v: string | number): number {
   return parseFloat(v.replace('%', ''))
 }
 
+function finiteNumber(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
 function normalizeBenchmarkModel(m: Record<string, unknown>) {
   const cm = m.confusionMatrix as Record<Label, Record<Label, number>>
-  const raw = m.classMetrics as Record<Label, { precision: string; recall: string; f1: string }>
+  const raw = m.classMetrics as Record<Label, { precision: string; recall: string; f1: string }> | undefined
+  if (!raw || !cm) {
+    return normalizePipelineModel(m, [])
+  }
   const totalSamples = LABELS.reduce((s, a) =>
     s + LABELS.reduce((ss, p) => ss + (cm[a]?.[p] ?? 0), 0), 0)
   const classMetrics = Object.fromEntries(LABELS.map(cls => [cls, {
-    precision: parsePct(raw[cls].precision),
-    recall: parsePct(raw[cls].recall),
-    f1: parsePct(raw[cls].f1),
+    precision: parsePct(raw[cls]?.precision ?? 0),
+    recall: parsePct(raw[cls]?.recall ?? 0),
+    f1: parsePct(raw[cls]?.f1 ?? 0),
     support: LABELS.reduce((s, p) => s + (cm[cls]?.[p] ?? 0), 0),
   }])) as Record<Label, { precision: number; recall: number; f1: number; support: number }>
   const correct = LABELS.reduce((s, cls) => s + (cm[cls]?.[cls] ?? 0), 0)
@@ -35,12 +42,12 @@ function normalizeBenchmarkModel(m: Record<string, unknown>) {
 
 function normalizePipelineModel(m: Record<string, unknown>, details: Detail[]) {
   const classMetrics = Object.fromEntries(LABELS.map(cls => {
-    const c = m[cls] as { precision: number; recall: number; 'f1-score': number; support: number }
+    const c = (m[cls] ?? {}) as { precision?: number; recall?: number; 'f1-score'?: number; support?: number }
     return [cls, {
-      precision: Math.round(c.precision * 1000) / 10,
-      recall: Math.round(c.recall * 1000) / 10,
-      f1: Math.round(c['f1-score'] * 1000) / 10,
-      support: c.support,
+      precision: Math.round((c.precision ?? 0) * 1000) / 10,
+      recall: Math.round((c.recall ?? 0) * 1000) / 10,
+      f1: Math.round((c['f1-score'] ?? 0) * 1000) / 10,
+      support: c.support ?? 0,
     }]
   })) as Record<Label, { precision: number; recall: number; f1: number; support: number }>
 
@@ -52,11 +59,11 @@ function normalizePipelineModel(m: Record<string, unknown>, details: Detail[]) {
     if (confusionMatrix[a] && confusionMatrix[a][p] !== undefined) confusionMatrix[a][p]++
   }
 
-  const accuracy = Math.round((m.accuracy as number) * 1000) / 10
-  const macro = m['macro avg'] as { 'f1-score': number }
-  const weighted = m['weighted avg'] as { 'f1-score': number }
-  const macroF1 = Math.round(macro['f1-score'] * 1000) / 10
-  const weightedF1 = Math.round(weighted['f1-score'] * 1000) / 10
+  const accuracy = Math.round(finiteNumber(m.accuracy) * 1000) / 10
+  const macro = (m['macro avg'] ?? {}) as { 'f1-score'?: number }
+  const weighted = (m['weighted avg'] ?? {}) as { 'f1-score'?: number }
+  const macroF1 = Math.round(finiteNumber(macro['f1-score']) * 1000) / 10
+  const weightedF1 = Math.round(finiteNumber(weighted['f1-score']) * 1000) / 10
   const totalSamples = LABELS.reduce((s, cls) => s + classMetrics[cls].support, 0)
   return { accuracy, macroF1, weightedF1, totalSamples, classMetrics, confusionMatrix }
 }
@@ -68,6 +75,47 @@ interface Detail {
   actual_label: string
   predicted_label: string
   confidence_score: number | string
+}
+
+function patchIdFromScene(sceneId: string): string {
+  return sceneId.split("_").at(-1) ?? sceneId
+}
+
+function isSevere(label: string): boolean {
+  return label === "Major Damage" || label === "Destroyed"
+}
+
+function buildGeoComparison(details: Detail[]) {
+  const byPatch = new Map<string, {
+    patchId: string
+    total: number
+    correct: number
+    actualSevere: number
+    predictedSevere: number
+  }>()
+
+  for (const detail of details) {
+    const patchId = patchIdFromScene(detail.scene_id)
+    const current = byPatch.get(patchId) ?? {
+      patchId,
+      total: 0,
+      correct: 0,
+      actualSevere: 0,
+      predictedSevere: 0,
+    }
+
+    current.total += 1
+    if (detail.actual_label === detail.predicted_label) current.correct += 1
+    if (isSevere(detail.actual_label)) current.actualSevere += 1
+    if (isSevere(detail.predicted_label)) current.predictedSevere += 1
+    byPatch.set(patchId, current)
+  }
+
+  return [...byPatch.values()].map((patch) => ({
+    ...patch,
+    accuracy: patch.total > 0 ? Math.round((patch.correct / patch.total) * 1000) / 10 : 0,
+    severeDelta: patch.predictedSevere - patch.actualSevere,
+  }))
 }
 
 async function fetchAndCachePipeline() {
@@ -87,30 +135,16 @@ async function fetchAndCachePipeline() {
 
 export async function GET() {
   try {
-    const benchmark = JSON.parse(readFileSync(join(process.cwd(), 'content', 'benchmark_results.json'), 'utf-8'))
     const pipeline = await fetchAndCachePipeline()
 
-    const models = []
-
-    // Benchmark models
-    for (const [modelId, metrics] of Object.entries(benchmark.metrics)) {
-      models.push({
-        id: modelId,
-        shortName: MODEL_NAMES[modelId] ?? modelId,
-        source: 'benchmark' as const,
-        ...normalizeBenchmarkModel(metrics as Record<string, unknown>),
-      })
-    }
-
-    // Pipeline model
     const pipelineModelId = Object.keys(pipeline.metrics)[0]
     const pipelineDetails: Detail[] = pipeline.details ?? []
-    models.push({
+    const model = {
       id: pipelineModelId,
       shortName: MODEL_NAMES[pipelineModelId] ?? pipelineModelId,
       source: 'pipeline' as const,
       ...normalizePipelineModel(pipeline.metrics[pipelineModelId], pipelineDetails),
-    })
+    }
 
     // Confidence distribution from pipeline details
     const confBins: Record<number, number> = {}
@@ -161,13 +195,15 @@ export async function GET() {
     })
 
     return NextResponse.json({
-      models,
+      model,
+      models: [model],
       pipeline: {
         modelId: pipelineModelId,
         totalSamples: pipelineDetails.length,
         confidenceDistribution,
         classDistribution,
         confAccuracy,
+        geoComparison: buildGeoComparison(pipelineDetails),
       },
     })
   } catch (e) {

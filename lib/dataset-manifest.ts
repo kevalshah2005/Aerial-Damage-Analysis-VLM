@@ -37,6 +37,10 @@ const RIGHT_STRIP_SEAM_TILE_IDS = new Set([
 ])
 const RIGHT_STRIP_MIN_COLUMN = 5
 const RIGHT_STRIP_MAX_OFFSET_DELTA = 0.18
+const configuredOverlayOffsetLat = Number.parseFloat(process.env.DATASET_OVERLAY_OFFSET_LAT ?? "-0.00010")
+const configuredOverlayOffsetLng = Number.parseFloat(process.env.DATASET_OVERLAY_OFFSET_LNG ?? "0.00002")
+const DEFAULT_OVERLAY_OFFSET_LAT = Number.isFinite(configuredOverlayOffsetLat) ? configuredOverlayOffsetLat : -0.00010
+const DEFAULT_OVERLAY_OFFSET_LNG = Number.isFinite(configuredOverlayOffsetLng) ? configuredOverlayOffsetLng : 0.00002
 
 function extractFilename(value: string): string | null {
   if (!value) return null
@@ -107,6 +111,23 @@ function imageCoordinatesToBounds(coordinates: DatasetImageCoordinates): Dataset
   return [
     [Math.min(...lats), Math.min(...lons)],
     [Math.max(...lats), Math.max(...lons)],
+  ]
+}
+
+function translateCoordinates(
+  coordinates: DatasetImageCoordinates,
+  offsetLng: number,
+  offsetLat: number
+): DatasetImageCoordinates {
+  return coordinates.map(([lng, lat]) => [lng + offsetLng, lat + offsetLat]) as DatasetImageCoordinates
+}
+
+function boundsToImageCoordinates(bounds: DatasetBounds): DatasetImageCoordinates {
+  return [
+    [bounds[0][1], bounds[1][0]],
+    [bounds[1][1], bounds[1][0]],
+    [bounds[1][1], bounds[0][0]],
+    [bounds[0][1], bounds[0][0]],
   ]
 }
 
@@ -301,7 +322,7 @@ export function getPatchLayerBounds(patch: DatasetPatch, layer: "pre" | "post"):
 }
 
 export function loadAugmentedManifest(
-  options?: { scaleX?: number; scaleY?: number }
+  options?: { scaleX?: number; scaleY?: number; offsetLat?: number; offsetLng?: number }
 ): DatasetManifest {
   const manifestPath = path.join(process.cwd(), "content", "manifest.json")
   const geotransformsPath = path.join(process.cwd(), "content", "xview_geotransforms.json")
@@ -342,7 +363,26 @@ export function loadAugmentedManifest(
     patches,
     options?.scaleX ?? 1,
     options?.scaleY ?? 1
-  )
+  ).map((patch) => {
+    const offsetLat = options?.offsetLat ?? DEFAULT_OVERLAY_OFFSET_LAT
+    const offsetLng = options?.offsetLng ?? DEFAULT_OVERLAY_OFFSET_LNG
+    const displayCoordinates = patch.snappedDisplayCoordinates ?? boundsToImageCoordinates(patch.snappedDisplayBounds ?? patch.displayBounds ?? patch.bounds)
+    const preCoordinates = patch.snappedPreCoordinates ?? boundsToImageCoordinates(patch.snappedPreBounds ?? patch.preBounds ?? patch.bounds)
+    const postCoordinates = patch.snappedPostCoordinates ?? boundsToImageCoordinates(patch.snappedPostBounds ?? patch.postBounds ?? patch.bounds)
+    const translatedDisplayCoordinates = translateCoordinates(displayCoordinates, offsetLng, offsetLat)
+    const translatedPreCoordinates = translateCoordinates(preCoordinates, offsetLng, offsetLat)
+    const translatedPostCoordinates = translateCoordinates(postCoordinates, offsetLng, offsetLat)
+
+    return {
+      ...patch,
+      snappedPreBounds: imageCoordinatesToBounds(translatedPreCoordinates),
+      snappedPostBounds: imageCoordinatesToBounds(translatedPostCoordinates),
+      snappedDisplayBounds: imageCoordinatesToBounds(translatedDisplayCoordinates),
+      snappedPreCoordinates: translatedPreCoordinates,
+      snappedPostCoordinates: translatedPostCoordinates,
+      snappedDisplayCoordinates: translatedDisplayCoordinates,
+    }
+  })
   const snappedTotalBounds = snappedPatches.reduce<DatasetBounds | null>((acc, patch) => {
     const bounds = patch.snappedDisplayBounds ?? patch.displayBounds ?? patch.bounds
     return acc ? mergeBounds(acc, bounds) : bounds
