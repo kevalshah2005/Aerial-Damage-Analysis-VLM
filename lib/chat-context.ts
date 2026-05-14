@@ -26,26 +26,73 @@ function loadManifestSummary(contentDir: string): string | null {
   try {
     const manifest = JSON.parse(raw) as {
       count?: number
-      patches?: Array<{ id?: string; buildingCount?: number }>
+      totalBounds?: [[number, number], [number, number]]
+      patches?: Array<{ id?: string; buildingCount?: number; bounds?: unknown }>
     }
     const count = manifest.count ?? manifest.patches?.length ?? 0
     const totalBuildings = (manifest.patches ?? []).reduce(
       (sum, patch) => sum + (patch.buildingCount ?? 0),
       0
     )
-    const samplePatchIds = (manifest.patches ?? [])
-      .slice(0, 10)
-      .map((patch) => patch.id)
-      .filter(Boolean)
-      .join(", ")
 
     return [
       `Patch count: ${count}`,
-      `Approximate building features (sum of per-patch max): ${totalBuildings}`,
-      samplePatchIds ? `Sample patch IDs: ${samplePatchIds}` : null,
+      `Total buildings: ${totalBuildings}`,
+      manifest.totalBounds ? `Geographic extent: SW ${manifest.totalBounds[0].join(", ")} — NE ${manifest.totalBounds[1].join(", ")}` : null,
     ]
       .filter(Boolean)
       .join("\n")
+  } catch {
+    return null
+  }
+}
+
+function loadPatchSummaries(contentDir: string): string | null {
+  const summariesPath = path.join(contentDir, "chat-context", "patch_summaries.json")
+  const raw = safeReadFile(summariesPath)
+  if (!raw) return null
+
+  try {
+    type PatchSummary = {
+      id: string
+      bounds: [[number, number], [number, number]]
+      buildingCount: number
+      damage: Record<string, number>
+    }
+    const patches = JSON.parse(raw) as PatchSummary[]
+
+    // Top 10 by destroyed count
+    const byDestroyed = [...patches]
+      .sort((a, b) => (b.damage["destroyed"] ?? 0) - (a.damage["destroyed"] ?? 0))
+      .slice(0, 10)
+
+    // Top 10 by total severe (major + destroyed)
+    const bySevere = [...patches]
+      .sort((a, b) => {
+        const sa = (b.damage["destroyed"] ?? 0) + (b.damage["major-damage"] ?? 0)
+        const sb = (a.damage["destroyed"] ?? 0) + (a.damage["major-damage"] ?? 0)
+        return sa - sb
+      })
+      .slice(0, 10)
+
+    const fmt = (p: PatchSummary) => {
+      const d = p.damage
+      const center = [
+        ((p.bounds[0][0] + p.bounds[1][0]) / 2).toFixed(5),
+        ((p.bounds[0][1] + p.bounds[1][1]) / 2).toFixed(5),
+      ].join(", ")
+      return `  patch ${p.id} (center ${center}): destroyed=${d["destroyed"] ?? 0}, major=${d["major-damage"] ?? 0}, minor=${d["minor-damage"] ?? 0}, none=${d["no-damage"] ?? 0}`
+    }
+
+    return [
+      `Total patches with per-building data: ${patches.length}`,
+      "",
+      "Top 10 patches by destroyed building count:",
+      byDestroyed.map(fmt).join("\n"),
+      "",
+      "Top 10 patches by severe damage (major + destroyed):",
+      bySevere.map(fmt).join("\n"),
+    ].join("\n")
   } catch {
     return null
   }
@@ -92,6 +139,16 @@ export function buildChatDataContext(): string {
       [
         "### Disaster Damage Data (Local JSON)",
         trimSection(jsonContext, MAX_SECTION_CHARS),
+      ].join("\n")
+    )
+  }
+
+  const patchSummaries = loadPatchSummaries(contentDir)
+  if (patchSummaries) {
+    sections.push(
+      [
+        "### Per-Patch Damage Summaries (Pre-computed from Labels)",
+        trimSection(patchSummaries, MAX_SECTION_CHARS),
       ].join("\n")
     )
   }

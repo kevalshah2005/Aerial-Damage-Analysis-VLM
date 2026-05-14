@@ -19,6 +19,11 @@ import {
   Plus,
   Trash2,
   MessageSquare,
+  Pencil,
+  CheckCircle,
+  AlertTriangle,
+  AlertCircle,
+  ShieldX,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import DashboardHeader from '@/components/dashboard-header'
@@ -48,6 +53,12 @@ type Conversation = {
   lastMessagePreview: string
 }
 
+type VLMResponse = {
+  visual_analysis?: string
+  damage_label?: string
+  confidence_score?: number
+}
+
 const SUGGESTED_PROMPTS = [
   {
     icon: <Scan className="h-3.5 w-3.5" />,
@@ -62,6 +73,24 @@ const SUGGESTED_PROMPTS = [
     text: 'Classify building damage severity across the image',
   },
 ]
+
+const DAMAGE_CONFIG: Record<string, { color: string; bg: string; border: string; Icon: React.ElementType }> = {
+  'No Damage':    { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30', Icon: CheckCircle },
+  'Minor Damage': { color: 'text-yellow-400',  bg: 'bg-yellow-400/10',  border: 'border-yellow-400/30',  Icon: AlertTriangle },
+  'Major Damage': { color: 'text-red-400',     bg: 'bg-red-400/10',     border: 'border-red-400/30',     Icon: AlertCircle },
+  'Destroyed':    { color: 'text-purple-400',  bg: 'bg-purple-400/10',  border: 'border-purple-400/30',  Icon: ShieldX },
+}
+
+function tryParseVLM(text: string): VLMResponse | null {
+  const stripped = text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+  try {
+    const parsed = JSON.parse(stripped)
+    if (typeof parsed === 'object' && parsed !== null && ('visual_analysis' in parsed || 'damage_label' in parsed)) {
+      return parsed as VLMResponse
+    }
+  } catch { /* not JSON */ }
+  return null
+}
 
 async function getAuthHeader(): Promise<Record<string, string>> {
   const session = await fetchAuthSession({ forceRefresh: true })
@@ -83,6 +112,10 @@ export default function VLMPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [loadingConversations, setLoadingConversations] = useState(false)
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -126,6 +159,10 @@ export default function VLMPage() {
       loadConversations()
     }
   }, [authStatus, loadConversations])
+
+  useEffect(() => {
+    if (!skipAuth && authStatus === 'unauthenticated') router.push('/auth')
+  }, [authStatus, router])
 
   const createNewConversation = async (): Promise<string | null> => {
     if (skipAuth) return null
@@ -175,6 +212,24 @@ export default function VLMPage() {
       if (activeConversationId === conversationId) {
         setMessages([])
         setActiveConversationId(null)
+      }
+    } catch { /* skip */ }
+  }
+
+  const commitRename = async (conversationId: string) => {
+    const trimmed = editingTitle.trim()
+    setEditingConversationId(null)
+    setEditingTitle('')
+    if (!trimmed) return
+    try {
+      const headers = await getAuthHeader()
+      const res = await fetch(`/api/vlm/conversations/${conversationId}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmed }),
+      })
+      if (res.ok) {
+        setConversations(prev => prev.map(c => c.conversationId === conversationId ? { ...c, title: trimmed } : c))
       }
     } catch { /* skip */ }
   }
@@ -243,7 +298,6 @@ export default function VLMPage() {
     setIsLoading(true)
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
-    // Ensure conversation exists
     let convId = activeConversationId
     if (!convId && !skipAuth) {
       convId = await createNewConversation()
@@ -252,7 +306,6 @@ export default function VLMPage() {
 
     try {
       const images = await Promise.all(imagesToSend.map(img => fileToBase64(img.file)))
-
       const authHeaders = skipAuth ? {} : await getAuthHeader().catch(() => ({}))
       const res = await fetch('/api/vlm', {
         method: 'POST',
@@ -265,20 +318,11 @@ export default function VLMPage() {
         ? (data.text ?? 'No response from model.')
         : `Error: ${data.error ?? 'Request failed'}`
 
-      setMessages(prev => [
-        ...prev,
-        { id: genId(), role: 'assistant', text: responseText },
-      ])
+      setMessages(prev => [...prev, { id: genId(), role: 'assistant', text: responseText }])
 
-      // Refresh conversation list to update preview/timestamp
-      if (!skipAuth) {
-        loadConversations()
-      }
+      if (!skipAuth) loadConversations()
     } catch {
-      setMessages(prev => [
-        ...prev,
-        { id: genId(), role: 'assistant', text: 'Failed to reach the VLM. Check your connection and try again.' },
-      ])
+      setMessages(prev => [...prev, { id: genId(), role: 'assistant', text: 'Failed to reach the VLM. Check your connection and try again.' }])
     } finally {
       setIsLoading(false)
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -302,6 +346,28 @@ export default function VLMPage() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
       <DashboardHeader />
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setLightboxUrl(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxUrl}
+            alt="Full size"
+            className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl object-contain"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 flex items-center justify-center h-8 w-8 rounded-full bg-background/80 text-foreground hover:bg-background transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Sidebar */}
@@ -331,20 +397,45 @@ export default function VLMPage() {
                 conversations.map(conv => (
                   <div
                     key={conv.conversationId}
-                    className={`group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${
+                    className={`group flex items-center gap-1 px-2 py-2 cursor-pointer transition-colors ${
                       activeConversationId === conv.conversationId
                         ? 'bg-primary/10 text-foreground'
                         : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
                     }`}
-                    onClick={() => loadConversation(conv.conversationId)}
+                    onClick={() => {
+                      if (editingConversationId !== conv.conversationId) loadConversation(conv.conversationId)
+                    }}
                   >
                     <MessageSquare className="h-3 w-3 shrink-0" />
-                    <span className="text-xs truncate flex-1">{conv.title}</span>
+                    <div className="flex-1 min-w-0">
+                      {editingConversationId === conv.conversationId ? (
+                        <input
+                          autoFocus
+                          value={editingTitle}
+                          onChange={e => setEditingTitle(e.target.value)}
+                          onBlur={() => commitRename(conv.conversationId)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); void commitRename(conv.conversationId) }
+                            if (e.key === 'Escape') { setEditingConversationId(null); setEditingTitle('') }
+                          }}
+                          className="w-full bg-background border border-border rounded px-1.5 py-0.5 text-xs text-foreground outline-none focus:ring-0"
+                          onClick={e => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span className="text-xs truncate block">{conv.title}</span>
+                      )}
+                    </div>
                     <button
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-opacity p-0.5"
+                      onClick={e => { e.stopPropagation(); setEditingConversationId(conv.conversationId); setEditingTitle(conv.title) }}
+                    >
+                      <Pencil className="h-2.5 w-2.5" />
+                    </button>
+                    <button
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity p-0.5"
                       onClick={e => { e.stopPropagation(); deleteConversation(conv.conversationId) }}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-2.5 w-2.5" />
                     </button>
                   </div>
                 ))
@@ -360,7 +451,6 @@ export default function VLMPage() {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {/* Drag overlay */}
           {isDragging && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg m-2">
               <div className="flex flex-col items-center gap-3 text-primary">
@@ -405,82 +495,7 @@ export default function VLMPage() {
             ) : (
               <div className="flex flex-col gap-4 px-4 py-6 max-w-3xl mx-auto w-full">
                 {messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                  >
-                    <div className={`shrink-0 flex items-center justify-center h-7 w-7 rounded-lg border ${
-                      msg.role === 'user'
-                        ? 'bg-primary/15 border-primary/20 text-primary'
-                        : 'bg-secondary border-border text-muted-foreground'
-                    }`}>
-                      {msg.role === 'user'
-                        ? <User className="h-3.5 w-3.5" />
-                        : <Bot className="h-3.5 w-3.5" />
-                      }
-                    </div>
-
-                    <div className={`flex flex-col gap-2 max-w-[75%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      {(msg.images?.length || msg.imageUrls?.length) ? (
-                        <div className={`flex flex-wrap gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {msg.images?.map(img => (
-                            <div key={img.id} className="relative rounded-lg overflow-hidden border border-border">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={img.previewUrl} alt={img.name} className="h-36 w-auto max-w-xs object-cover" />
-                            </div>
-                          ))}
-                          {msg.imageUrls?.map((url, i) => (
-                            <div key={i} className="relative rounded-lg overflow-hidden border border-border">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={url} alt={`image-${i}`} className="h-36 w-auto max-w-xs object-cover" />
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                      {msg.text && (
-                        <div className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed ${
-                          msg.role === 'user'
-                            ? 'bg-primary/15 text-foreground border border-primary/20'
-                            : 'bg-card text-foreground border border-border'
-                        }`}>
-                          {msg.role === 'assistant' && (
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <Sparkles className="h-3 w-3 text-primary" />
-                              <span className="text-[10px] font-semibold text-primary uppercase tracking-widest">VLM</span>
-                            </div>
-                          )}
-                          {msg.role === 'user' ? (
-                            <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                          ) : (
-                            <div className="text-xs leading-relaxed break-words">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  h1: ({ children }) => <h1 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h1>,
-                                  h2: ({ children }) => <h2 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h2>,
-                                  h3: ({ children }) => <h3 className="text-xs font-semibold mt-2 mb-1 first:mt-0">{children}</h3>,
-                                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                                  ul: ({ children }) => <ul className="list-disc ml-4 mb-2 last:mb-0">{children}</ul>,
-                                  ol: ({ children }) => <ol className="list-decimal ml-4 mb-2 last:mb-0">{children}</ol>,
-                                  li: ({ children }) => <li className="mb-1">{children}</li>,
-                                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                                  code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) =>
-                                    inline ? (
-                                      <code className="px-1 py-0.5 rounded bg-muted text-[11px]">{children}</code>
-                                    ) : (
-                                      <code className="block p-2 rounded bg-muted text-[11px] overflow-x-auto">{children}</code>
-                                    ),
-                                  a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-primary underline">{children}</a>,
-                                }}
-                              >
-                                {msg.text}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <MessageRow key={msg.id} msg={msg} onImageClick={setLightboxUrl} />
                 ))}
                 {isLoading && (
                   <div className="flex gap-3">
@@ -573,6 +588,145 @@ export default function VLMPage() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function MessageRow({ msg, onImageClick }: { msg: Message; onImageClick: (url: string) => void }) {
+  const isUser = msg.role === 'user'
+  const vlm = !isUser ? tryParseVLM(msg.text) : null
+
+  return (
+    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`shrink-0 flex items-center justify-center h-7 w-7 rounded-lg border ${
+        isUser
+          ? 'bg-primary/15 border-primary/20 text-primary'
+          : 'bg-secondary border-border text-muted-foreground'
+      }`}>
+        {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+      </div>
+
+      <div className={`flex flex-col gap-2 max-w-[75%] ${isUser ? 'items-end' : 'items-start'}`}>
+        {(msg.images?.length || msg.imageUrls?.length) ? (
+          <div className={`flex flex-wrap gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+            {msg.images?.map(img => (
+              <button
+                key={img.id}
+                className="relative rounded-lg overflow-hidden border border-border hover:opacity-90 hover:ring-2 hover:ring-primary/40 transition-all cursor-zoom-in"
+                onClick={() => onImageClick(img.previewUrl)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.previewUrl} alt={img.name} className="h-36 w-auto max-w-xs object-cover" />
+              </button>
+            ))}
+            {msg.imageUrls?.map((url, i) => (
+              <button
+                key={i}
+                className="relative rounded-lg overflow-hidden border border-border hover:opacity-90 hover:ring-2 hover:ring-primary/40 transition-all cursor-zoom-in"
+                onClick={() => onImageClick(url)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`image-${i}`} className="h-36 w-auto max-w-xs object-cover" />
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {msg.text && (
+          isUser ? (
+            <div className="px-3.5 py-2.5 rounded-xl text-sm leading-relaxed bg-primary/15 text-foreground border border-primary/20">
+              <p className="text-xs leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+            </div>
+          ) : vlm ? (
+            <VLMResponseCard response={vlm} />
+          ) : (
+            <div className="px-3.5 py-2.5 rounded-xl text-sm leading-relaxed bg-card text-foreground border border-border">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Sparkles className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-widest">VLM</span>
+              </div>
+              <div className="text-xs leading-relaxed break-words">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ children }) => <h1 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-xs font-semibold mt-2 mb-1 first:mt-0">{children}</h3>,
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc ml-4 mb-2 last:mb-0">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal ml-4 mb-2 last:mb-0">{children}</ol>,
+                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                    strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                    code: ({ inline, children }: { inline?: boolean; children?: React.ReactNode }) =>
+                      inline ? (
+                        <code className="px-1 py-0.5 rounded bg-muted text-[11px]">{children}</code>
+                      ) : (
+                        <code className="block p-2 rounded bg-muted text-[11px] overflow-x-auto">{children}</code>
+                      ),
+                    a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-primary underline">{children}</a>,
+                  }}
+                >
+                  {msg.text}
+                </ReactMarkdown>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+function VLMResponseCard({ response }: { response: VLMResponse }) {
+  const label = response.damage_label ?? 'Unknown'
+  const config = DAMAGE_CONFIG[label]
+  const Icon = config?.Icon ?? AlertCircle
+  const score = response.confidence_score ?? 0
+
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden min-w-[280px] max-w-[420px]">
+      {/* Header */}
+      <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border">
+        <Sparkles className="h-3 w-3 text-primary" />
+        <span className="text-[10px] font-semibold text-primary uppercase tracking-widest">VLM Analysis</span>
+      </div>
+
+      {/* Damage label */}
+      <div className={`flex items-center gap-3 px-4 py-3 ${config?.bg ?? 'bg-muted/20'} border-b border-border`}>
+        <Icon className={`h-5 w-5 shrink-0 ${config?.color ?? 'text-muted-foreground'}`} />
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mb-0.5">Damage Label</div>
+          <div className={`text-base font-bold leading-tight ${config?.color ?? 'text-foreground'}`}>{label}</div>
+        </div>
+        {score > 0 && (
+          <div className="text-right shrink-0">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mb-0.5">Confidence</div>
+            <div className={`text-xl font-black ${config?.color ?? 'text-foreground'}`}>{score}%</div>
+          </div>
+        )}
+      </div>
+
+      {/* Confidence bar */}
+      {score > 0 && (
+        <div className="px-4 py-2 border-b border-border">
+          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${
+                score >= 80 ? 'bg-emerald-400' : score >= 60 ? 'bg-amber-400' : 'bg-red-400'
+              }`}
+              style={{ width: `${score}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Visual analysis */}
+      {response.visual_analysis && (
+        <div className="px-4 py-3">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium mb-1.5">Visual Analysis</div>
+          <p className="text-xs text-foreground leading-relaxed">{response.visual_analysis}</p>
+        </div>
+      )}
     </div>
   )
 }

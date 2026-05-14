@@ -1,15 +1,33 @@
+export type DatasetBounds = [[number, number], [number, number]]
+export type DatasetImageCoordinates = [
+  [number, number],
+  [number, number],
+  [number, number],
+  [number, number],
+]
+
 export interface DatasetPatch {
   id: string
   pre: string
   post: string
   preJson: string
   postJson: string
-  bounds: [[number, number], [number, number]]
+  predictedJson?: string
+  bounds: DatasetBounds
+  preBounds?: DatasetBounds
+  postBounds?: DatasetBounds
+  displayBounds?: DatasetBounds
+  snappedPreBounds?: DatasetBounds
+  snappedPostBounds?: DatasetBounds
+  snappedDisplayBounds?: DatasetBounds
+  snappedPreCoordinates?: DatasetImageCoordinates
+  snappedPostCoordinates?: DatasetImageCoordinates
+  snappedDisplayCoordinates?: DatasetImageCoordinates
   buildingCount: number
 }
 
 export interface DatasetManifest {
   patches: DatasetPatch[]
-  totalBounds: [[number, number], [number, number]]
+  totalBounds: DatasetBounds
   count: number
 }

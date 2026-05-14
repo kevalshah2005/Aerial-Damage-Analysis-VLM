@@ -34,6 +34,12 @@ export type Conversation = {
   source?: string
 }
 
+export type StoredToolCall = {
+  toolCallId: string
+  toolName: string
+  input: Record<string, unknown>
+}
+
 export type ChatMessage = {
   conversationId: string
   createdAt: string
@@ -43,6 +49,7 @@ export type ChatMessage = {
   content: string
   modelId?: string
   imageUrls?: string[]
+  toolCalls?: StoredToolCall[]
 }
 
 export async function createConversation(
@@ -145,6 +152,7 @@ export async function appendMessage(input: {
   content: string
   modelId?: string
   imageUrls?: string[]
+  toolCalls?: StoredToolCall[]
 }): Promise<ChatMessage> {
   const { messagesTable } = getTableNames()
   const ddb = getDdbClient()
@@ -157,6 +165,7 @@ export async function appendMessage(input: {
     content: input.content,
     modelId: input.modelId,
     ...(input.imageUrls?.length ? { imageUrls: input.imageUrls } : {}),
+    ...(input.toolCalls?.length ? { toolCalls: input.toolCalls } : {}),
   }
 
   await ddb.send(
